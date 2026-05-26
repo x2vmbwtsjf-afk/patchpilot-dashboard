@@ -13,3 +13,4 @@ nohup.out
 
 # Local verification screenshots
 *.png
+!docs/screenshots/*.png
