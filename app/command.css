@@ -1,0 +1,145 @@
+.command-dashboard-grid {
+  grid-template-columns: 300px minmax(0, 1fr) 270px 270px;
+  grid-template-areas:
+    "metrics metrics metrics metrics"
+    "alerts work work work"
+    "quick quick quick quick"
+    "activity activity activity activity"
+    "rack rack rack rack"
+    "tech scans offline health";
+  gap: 10px;
+}
+
+.command-metrics {
+  grid-area: metrics;
+  margin-bottom: 0;
+}
+
+.command-dashboard-grid .alerts-card {
+  grid-area: alerts;
+}
+
+.command-dashboard-grid .work-card-main {
+  grid-area: work;
+}
+
+.command-dashboard-grid .quick-actions-card {
+  grid-area: quick;
+}
+
+.command-dashboard-grid .activity-card {
+  grid-area: activity;
+}
+
+.command-dashboard-grid .rack-card-main {
+  grid-area: rack;
+}
+
+.command-dashboard-grid .technicians-card {
+  grid-area: tech;
+}
+
+.command-dashboard-grid .scans-card {
+  grid-area: scans;
+}
+
+.command-dashboard-grid .offline-card {
+  grid-area: offline;
+}
+
+.command-dashboard-grid .health-card {
+  grid-area: health;
+}
+
+.command-dashboard-grid .quick-actions-card,
+.command-dashboard-grid .activity-card,
+.command-dashboard-grid .rack-card-main,
+.command-dashboard-grid .technicians-card,
+.command-dashboard-grid .scans-card,
+.command-dashboard-grid .offline-card,
+.command-dashboard-grid .health-card {
+  min-height: 0;
+}
+
+.command-dashboard-grid .quick-actions {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+}
+
+.command-dashboard-grid .quick-actions button {
+  min-height: 64px;
+}
+
+.command-dashboard-grid .activity-list {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 8px;
+  padding: 0 12px 12px;
+}
+
+.command-dashboard-grid .activity-row {
+  min-height: 58px;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 10px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.command-dashboard-grid .rack-row {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+@media (max-width: 1450px) {
+  .command-dashboard-grid {
+    grid-template-columns: 270px minmax(0, 1fr) 250px;
+    grid-template-areas:
+      "metrics metrics metrics"
+      "alerts work work"
+      "quick quick quick"
+      "activity activity activity"
+      "rack rack rack"
+      "tech scans offline"
+      "health health health";
+  }
+
+  .command-dashboard-grid .quick-actions {
+    grid-template-columns: repeat(6, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 900px) {
+  .command-dashboard-grid {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      "metrics"
+      "alerts"
+      "work"
+      "quick"
+      "activity"
+      "rack"
+      "tech"
+      "scans"
+      "offline"
+      "health";
+  }
+
+  .command-dashboard-grid .quick-actions,
+  .command-dashboard-grid .activity-list,
+  .command-dashboard-grid .rack-row {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  .topbar {
+    display: block;
+  }
+
+  .command-dashboard-grid .quick-actions,
+  .command-dashboard-grid .activity-list,
+  .command-dashboard-grid .rack-row {
+    grid-template-columns: 1fr;
+  }
+
+  .command-dashboard-grid .command-metrics {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
