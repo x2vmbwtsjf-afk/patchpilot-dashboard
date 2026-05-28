@@ -731,6 +731,217 @@ const emptyAsset = (): AssetRecord => {
   };
 };
 
+const demoAssetInventory: AssetRecord[] = [
+  {
+    id: "PP-000128",
+    qrCode: "PP-000128",
+    assetType: "Switch",
+    name: "SW-LEAF-02",
+    serial: "AR-7280-A12-02",
+    status: "Active",
+    site: "DC1",
+    room: "Room 3",
+    rack: "RACK-A12",
+    ruPosition: "U36",
+    ipAddress: "10.20.12.2",
+    macAddress: "A4:3F:68:12:02:AA",
+    vlan: "110, 120, 130, 4094",
+    switchPort: "Et1-Et48",
+    cableType: "Fiber / DAC",
+    length: "",
+    connectorType: "QSFP / SFP",
+    from: "RACK-A12",
+    to: "RACK-B07",
+    notes: "Production leaf switch. QR label verified during last rack audit.",
+    tags: "network,leaf,production",
+    owner: "Network",
+    createdAt: "2026-05-01T08:15:00.000Z",
+    updatedAt: "2026-05-28T03:50:00.000Z"
+  },
+  {
+    id: "PP-000142",
+    qrCode: "PP-000142",
+    assetType: "Patch Panel",
+    name: "PP-A12-PATCH-01",
+    serial: "PPNL-A12-001",
+    status: "In Service",
+    site: "DC1",
+    room: "Room 3",
+    rack: "RACK-A12",
+    ruPosition: "U40-U41",
+    ipAddress: "",
+    macAddress: "",
+    vlan: "Trunk",
+    switchPort: "LC-01 - LC-24",
+    cableType: "OS2 / OM4",
+    length: "",
+    connectorType: "LC",
+    from: "Fiber tray A",
+    to: "Leaf row",
+    notes: "Panel mapping complete. Two unused LC ports reserved for spine uplink.",
+    tags: "fiber,patch-panel",
+    owner: "Infrastructure",
+    createdAt: "2026-05-01T08:15:00.000Z",
+    updatedAt: "2026-05-28T03:44:00.000Z"
+  },
+  {
+    id: "PP-000158",
+    qrCode: "PP-000158",
+    assetType: "Server",
+    name: "SRV-API-07",
+    serial: "DL380-A12-07",
+    status: "Active",
+    site: "DC1",
+    room: "Room 3",
+    rack: "RACK-A12",
+    ruPosition: "U24-U25",
+    ipAddress: "10.20.33.47",
+    macAddress: "3C:EC:EF:A1:07:19",
+    vlan: "120, 310",
+    switchPort: "SW-LEAF-02 Et2",
+    cableType: "DAC",
+    length: "1m",
+    connectorType: "QSFP",
+    from: "SW-LEAF-02 Et2",
+    to: "NIC1",
+    notes: "API node, dual PSU. NIC1 patched; iLO on management copper.",
+    tags: "server,api,production",
+    owner: "Platform",
+    createdAt: "2026-05-01T08:15:00.000Z",
+    updatedAt: "2026-05-28T03:42:00.000Z"
+  },
+  {
+    id: "PP-000201",
+    qrCode: "PP-000201",
+    assetType: "Switch",
+    name: "SW-SPINE-01",
+    serial: "AR-7800-B07-01",
+    status: "Active",
+    site: "DC1",
+    room: "Room 3",
+    rack: "RACK-B07",
+    ruPosition: "U37-U38",
+    ipAddress: "10.20.1.11",
+    macAddress: "A4:3F:68:78:01:B7",
+    vlan: "4094",
+    switchPort: "Et1-Et32",
+    cableType: "Fiber",
+    length: "10m",
+    connectorType: "LC / QSFP",
+    from: "Core row",
+    to: "Leaf rows",
+    notes: "Spine fabric switch. Uplink CBL-8812 mapped to A12 leaf.",
+    tags: "network,spine,fabric",
+    owner: "Network",
+    createdAt: "2026-05-01T08:15:00.000Z",
+    updatedAt: "2026-05-28T03:40:00.000Z"
+  },
+  {
+    id: "PP-000202",
+    qrCode: "PP-000202",
+    assetType: "Storage",
+    name: "STO-CORE-04",
+    serial: "PURE-B07-04",
+    status: "Maintenance",
+    site: "DC1",
+    room: "Room 3",
+    rack: "RACK-B07",
+    ruPosition: "U18-U21",
+    ipAddress: "10.20.44.14",
+    macAddress: "90:3A:72:B7:04:FC",
+    vlan: "220, 320",
+    switchPort: "FC1",
+    cableType: "Fiber",
+    length: "3m",
+    connectorType: "LC",
+    from: "Storage fabric",
+    to: "Core switch",
+    notes: "Maintenance window scheduled for controller firmware check.",
+    tags: "storage,maintenance",
+    owner: "Storage",
+    createdAt: "2026-05-01T08:15:00.000Z",
+    updatedAt: "2026-05-27T18:20:00.000Z"
+  },
+  {
+    id: "PP-000301",
+    qrCode: "PP-000301",
+    assetType: "Server",
+    name: "GPU-TRAIN-01",
+    serial: "DGX-C03-01",
+    status: "Maintenance",
+    site: "DC1",
+    room: "Room 4",
+    rack: "RACK-C03",
+    ruPosition: "U28-U33",
+    ipAddress: "10.21.70.11",
+    macAddress: "7C:FE:90:C3:01:11",
+    vlan: "700, 710",
+    switchPort: "IB1",
+    cableType: "Fiber",
+    length: "10m",
+    connectorType: "MPO",
+    from: "GPU-TRAIN-01 IB1",
+    to: "IB-FABRIC-02 MPO-18",
+    notes: "High power draw; validate cooling before next training batch.",
+    tags: "gpu,compute,high-power",
+    owner: "AI Platform",
+    createdAt: "2026-05-01T08:15:00.000Z",
+    updatedAt: "2026-05-28T02:58:00.000Z"
+  },
+  {
+    id: "PP-000302",
+    qrCode: "PP-000302",
+    assetType: "UPS",
+    name: "UPS-C03-A",
+    serial: "UPS-C03-A",
+    status: "Offline",
+    site: "DC1",
+    room: "Room 4",
+    rack: "RACK-C03",
+    ruPosition: "U1-U4",
+    ipAddress: "10.21.90.31",
+    macAddress: "00:C0:B7:C0:03:31",
+    vlan: "900",
+    switchPort: "MGMT",
+    cableType: "Copper",
+    length: "3ft",
+    connectorType: "RJ45",
+    from: "MGMT switch",
+    to: "UPS-C03-A",
+    notes: "Offline alert active. Field check required.",
+    tags: "power,offline",
+    owner: "Facilities",
+    createdAt: "2026-05-01T08:15:00.000Z",
+    updatedAt: "2026-05-28T02:37:00.000Z"
+  },
+  {
+    id: "PP-000401",
+    qrCode: "PP-000401",
+    assetType: "Storage",
+    name: "NAS-EDGE-01",
+    serial: "NAS-A01-08",
+    status: "Active",
+    site: "DC2",
+    room: "MDF",
+    rack: "RACK-A01",
+    ruPosition: "U22-U25",
+    ipAddress: "10.30.40.8",
+    macAddress: "44:8A:5B:A0:10:08",
+    vlan: "240",
+    switchPort: "Eth1",
+    cableType: "Copper",
+    length: "3ft",
+    connectorType: "RJ45",
+    from: "Edge switch",
+    to: "NAS-EDGE-01",
+    notes: "Branch storage endpoint, QR verified by Jordan.",
+    tags: "storage,edge,dc2",
+    owner: "Storage",
+    createdAt: "2026-05-01T08:15:00.000Z",
+    updatedAt: "2026-05-28T02:10:00.000Z"
+  }
+];
+
 function createAssetId() {
   const storedNext = Number(window.localStorage.getItem("patchpilot_asset_sequence") || "128");
   const next = Number.isFinite(storedNext) ? storedNext : 128;
@@ -1053,6 +1264,18 @@ export default function DashboardPage() {
 
         {activeNav === "Racks" ? (
           <RacksPage onOpenScanner={() => setIsScannerOpen(true)} />
+        ) : activeNav === "Assets" ? (
+          <AssetsInventoryPage
+            savedAssets={savedAssets}
+            onCreateAsset={() => {
+              setSelectedAsset(null);
+              setActiveNav("QR Studio");
+            }}
+            onOpenQrStudio={(asset) => {
+              setSelectedAsset(asset);
+              setActiveNav("QR Studio");
+            }}
+          />
         ) : activeNav === "Cables" ? (
           <CablesInventoryPage />
         ) : activeNav === "QR Studio" ? (
@@ -1515,6 +1738,254 @@ function DeviceDetails({ device, selectedCableId }: { device: RackDevice; select
       </div>
     </section>
   );
+}
+
+function AssetsInventoryPage({
+  savedAssets,
+  onCreateAsset,
+  onOpenQrStudio
+}: {
+  savedAssets: AssetRecord[];
+  onCreateAsset: () => void;
+  onOpenQrStudio: (asset: AssetRecord) => void;
+}) {
+  const assetRows = useMemo(() => {
+    const byId = new Map<string, AssetRecord>();
+    demoAssetInventory.forEach((asset) => byId.set(asset.id, asset));
+    savedAssets.forEach((asset) => byId.set(asset.id, asset));
+    return Array.from(byId.values()).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  }, [savedAssets]);
+
+  const [selectedAssetId, setSelectedAssetId] = useState(assetRows[0]?.id ?? demoAssetInventory[0].id);
+  const [assetQuery, setAssetQuery] = useState("");
+  const [typeFilter, setTypeFilter] = useState("All Types");
+  const [siteFilter, setSiteFilter] = useState("All Sites");
+  const [statusFilter, setStatusFilter] = useState("All Status");
+
+  const assetTypesList = useMemo(() => Array.from(new Set(assetRows.map((asset) => asset.assetType))).sort(), [assetRows]);
+  const sites = useMemo(() => Array.from(new Set(assetRows.map((asset) => asset.site).filter(Boolean))).sort(), [assetRows]);
+
+  const filteredAssets = useMemo(() => {
+    const needle = assetQuery.trim().toLowerCase();
+
+    return assetRows.filter((asset) => {
+      const searchable = [
+        asset.id,
+        asset.qrCode,
+        asset.assetType,
+        asset.name,
+        asset.serial,
+        asset.status,
+        asset.site,
+        asset.room,
+        asset.rack,
+        asset.ruPosition,
+        asset.ipAddress,
+        asset.macAddress,
+        asset.vlan,
+        asset.switchPort,
+        asset.owner,
+        asset.tags,
+        asset.notes
+      ]
+        .join(" ")
+        .toLowerCase();
+      const matchesQuery = !needle || searchable.includes(needle);
+      const matchesType = typeFilter === "All Types" || asset.assetType === typeFilter;
+      const matchesSite = siteFilter === "All Sites" || asset.site === siteFilter;
+      const matchesStatus = statusFilter === "All Status" || asset.status === statusFilter;
+
+      return matchesQuery && matchesType && matchesSite && matchesStatus;
+    });
+  }, [assetQuery, assetRows, siteFilter, statusFilter, typeFilter]);
+
+  const selectedAsset = filteredAssets.find((asset) => asset.id === selectedAssetId) ?? filteredAssets[0] ?? assetRows[0] ?? demoAssetInventory[0];
+
+  const assetStats = useMemo(() => {
+    const active = filteredAssets.filter((asset) => asset.status === "Active" || asset.status === "In Service").length;
+    const attention = filteredAssets.filter((asset) => asset.status === "Maintenance" || asset.status === "Offline").length;
+    const qrLinked = filteredAssets.filter((asset) => asset.qrCode).length;
+    const racksCount = new Set(filteredAssets.map((asset) => asset.rack).filter(Boolean)).size;
+    const ownersCount = new Set(filteredAssets.map((asset) => asset.owner).filter(Boolean)).size;
+
+    return { active, attention, qrLinked, racksCount, ownersCount };
+  }, [filteredAssets]);
+
+  const attentionAssets = useMemo(() => assetRows.filter((asset) => asset.status === "Maintenance" || asset.status === "Offline" || !asset.qrCode), [assetRows]);
+
+  return (
+    <section className="assets-page">
+      <header className="racks-hero assets-hero">
+        <div>
+          <p>Inventory</p>
+          <h1>Assets</h1>
+          <span>Operational asset registry for devices, racks, panels, power and storage</span>
+        </div>
+        <div className="racks-actions">
+          <button onClick={onCreateAsset} type="button">Add Asset</button>
+          <button type="button">Bulk Import</button>
+          <button type="button">Export CSV</button>
+        </div>
+      </header>
+
+      <section className="dc-command-strip assets-kpis">
+        <article>
+          <span>Total Assets</span>
+          <strong>{filteredAssets.length}</strong>
+          <small>{assetRows.length} in registry</small>
+        </article>
+        <article>
+          <span>Active / Service</span>
+          <strong>{assetStats.active}</strong>
+          <small>Ready for operations</small>
+        </article>
+        <article className={assetStats.attention ? "warning" : ""}>
+          <span>Needs Attention</span>
+          <strong>{assetStats.attention}</strong>
+          <small>Maintenance, offline, or QR gap</small>
+        </article>
+        <article>
+          <span>QR Linked</span>
+          <strong>{assetStats.qrLinked}</strong>
+          <small>Scannable asset tags</small>
+        </article>
+        <article>
+          <span>Racks / Owners</span>
+          <strong>{assetStats.racksCount} / {assetStats.ownersCount}</strong>
+          <small>Physical coverage</small>
+        </article>
+      </section>
+
+      <section className="rack-toolbar assets-toolbar ops-card">
+        <input value={assetQuery} onChange={(event) => setAssetQuery(event.target.value)} placeholder="Search QR, serial, hostname, rack, IP, MAC..." />
+        <select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)}>
+          <option>All Types</option>
+          {assetTypesList.map((type) => (
+            <option key={type}>{type}</option>
+          ))}
+        </select>
+        <select value={siteFilter} onChange={(event) => setSiteFilter(event.target.value)}>
+          <option>All Sites</option>
+          {sites.map((site) => (
+            <option key={site}>{site}</option>
+          ))}
+        </select>
+        <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+          <option>All Status</option>
+          <option>Active</option>
+          <option>In Service</option>
+          <option>In Stock</option>
+          <option>Maintenance</option>
+          <option>Offline</option>
+          <option>Retired</option>
+        </select>
+      </section>
+
+      <div className="assets-workspace">
+        <section className="ops-card assets-table-card">
+          <header>
+            <h2>Asset Registry</h2>
+            <button type="button">{filteredAssets.length} records</button>
+          </header>
+          <div className="assets-table">
+            <div className="assets-head">
+              <span>Asset</span>
+              <span>Type</span>
+              <span>Location</span>
+              <span>Network</span>
+              <span>Owner</span>
+              <span>Status</span>
+            </div>
+            {filteredAssets.map((asset) => (
+              <button className={selectedAsset.id === asset.id ? "active" : ""} key={asset.id} onClick={() => setSelectedAssetId(asset.id)} type="button">
+                <span>
+                  <b>{asset.name || asset.id}</b>
+                  <small>{asset.id} / {asset.serial || "No serial"}</small>
+                </span>
+                <span>
+                  <b>{asset.assetType}</b>
+                  <small>{asset.connectorType || asset.cableType || "No connector"}</small>
+                </span>
+                <span>
+                  <b>{asset.rack || "No rack"}</b>
+                  <small>{asset.site} / {asset.room || "No room"} / {asset.ruPosition || "No RU"}</small>
+                </span>
+                <span>
+                  <b>{asset.ipAddress || "No IP"}</b>
+                  <small>{asset.macAddress || asset.switchPort || "No network mapping"}</small>
+                </span>
+                <span>{asset.owner || "Unassigned"}</span>
+                <AssetStatusBadge status={asset.status} />
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <aside className="ops-card asset-detail-panel">
+          <header>
+            <div>
+              <h2>{selectedAsset.name || selectedAsset.id}</h2>
+              <span>{selectedAsset.assetType} / {selectedAsset.id}</span>
+            </div>
+            <AssetStatusBadge status={selectedAsset.status} />
+          </header>
+
+          <div className="asset-identity-card">
+            <div className="asset-qr-mark">QR</div>
+            <div>
+              <strong>{selectedAsset.qrCode || "Missing QR"}</strong>
+              <span>{getQrPayload(selectedAsset)}</span>
+            </div>
+          </div>
+
+          <div className="asset-detail-grid">
+            <span><small>Serial</small><b>{selectedAsset.serial || "Not set"}</b></span>
+            <span><small>Owner</small><b>{selectedAsset.owner || "Unassigned"}</b></span>
+            <span><small>Site</small><b>{selectedAsset.site || "No site"}</b></span>
+            <span><small>Room</small><b>{selectedAsset.room || "No room"}</b></span>
+            <span><small>Rack</small><b>{selectedAsset.rack || "No rack"}</b></span>
+            <span><small>RU Position</small><b>{selectedAsset.ruPosition || "No RU"}</b></span>
+            <span><small>IP Address</small><b>{selectedAsset.ipAddress || "No IP"}</b></span>
+            <span><small>MAC / Port</small><b>{selectedAsset.macAddress || selectedAsset.switchPort || "No mapping"}</b></span>
+            <span><small>VLAN</small><b>{selectedAsset.vlan || "No VLAN"}</b></span>
+            <span><small>Cable / Connector</small><b>{[selectedAsset.cableType, selectedAsset.connectorType].filter(Boolean).join(" / ") || "No link"}</b></span>
+          </div>
+
+          <section className="asset-notes-card">
+            <strong>Operational Notes</strong>
+            <p>{selectedAsset.notes || "No notes captured yet."}</p>
+            <small>Updated {new Date(selectedAsset.updatedAt).toLocaleString()}</small>
+          </section>
+
+          <div className="asset-actions">
+            <button onClick={() => onOpenQrStudio(selectedAsset)} type="button">Open QR Studio</button>
+            <button type="button">Create Work Order</button>
+            <button type="button">Print Label</button>
+          </div>
+
+          <section className="asset-attention-list">
+            <header>
+              <strong>Attention Queue</strong>
+              <span>{attentionAssets.length} items</span>
+            </header>
+            {attentionAssets.slice(0, 5).map((asset) => (
+              <button key={asset.id} onClick={() => setSelectedAssetId(asset.id)} type="button">
+                <span>
+                  <b>{asset.name || asset.id}</b>
+                  <small>{asset.rack || asset.site || "No location"} / {asset.assetType}</small>
+                </span>
+                <em>{asset.status}</em>
+              </button>
+            ))}
+          </section>
+        </aside>
+      </div>
+    </section>
+  );
+}
+
+function AssetStatusBadge({ status }: { status: AssetStatus }) {
+  return <em className={`asset-status ${status.toLowerCase().replace(" ", "-")}`}>{status}</em>;
 }
 
 function CablesInventoryPage() {
