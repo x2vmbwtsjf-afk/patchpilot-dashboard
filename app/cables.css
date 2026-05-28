@@ -1,0 +1,299 @@
+.cables-page {
+  display: grid;
+  gap: 10px;
+}
+
+.cables-hero {
+  background: linear-gradient(110deg, rgba(61, 220, 132, 0.1), rgba(96, 165, 250, 0.055) 46%, rgba(255, 255, 255, 0.02));
+}
+
+.cables-kpis article {
+  min-height: 92px;
+}
+
+.cables-toolbar {
+  grid-template-columns: minmax(360px, 1fr) repeat(3, 170px);
+}
+
+.cables-workspace {
+  display: grid;
+  grid-template-columns: minmax(720px, 1fr) minmax(360px, 0.42fr);
+  gap: 10px;
+  align-items: start;
+}
+
+.cables-table-card,
+.cable-detail-panel {
+  overflow: hidden;
+}
+
+.cables-table-card > header,
+.cable-detail-panel > header {
+  min-height: 52px;
+}
+
+.cable-detail-panel > header div span {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.cables-table {
+  display: grid;
+  padding: 0 12px 12px;
+}
+
+.cables-head,
+.cables-table button {
+  display: grid;
+  grid-template-columns: minmax(190px, 1.35fr) minmax(150px, 1fr) 110px 118px 78px 112px;
+  gap: 12px;
+  align-items: center;
+}
+
+.cables-head {
+  min-height: 32px;
+  border-top: 1px solid rgba(148, 163, 184, 0.16);
+  color: var(--muted-2);
+  font-size: 0.66rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cables-table button {
+  min-height: 58px;
+  border: 0;
+  border-top: 1px solid rgba(148, 163, 184, 0.14);
+  padding: 0;
+  background: transparent;
+  color: #dce9f7;
+  text-align: left;
+}
+
+.cables-table button:hover,
+.cables-table button.active {
+  background: linear-gradient(90deg, rgba(34, 211, 238, 0.08), transparent);
+}
+
+.cables-table b,
+.cables-table small {
+  display: block;
+}
+
+.cables-table b {
+  overflow: hidden;
+  font-size: 0.82rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cables-table small {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.68rem;
+}
+
+.qty-low b {
+  color: var(--amber);
+}
+
+.inventory-status {
+  justify-self: start;
+  border-radius: 999px;
+  padding: 5px 9px;
+  background: rgba(148, 163, 184, 0.14);
+  color: #dbeafe;
+  font-size: 0.66rem;
+  font-style: normal;
+  font-weight: 950;
+  white-space: nowrap;
+}
+
+.inventory-status.in-stock {
+  background: rgba(61, 220, 132, 0.14);
+  color: var(--green);
+}
+
+.inventory-status.low-stock,
+.inventory-status.reserved {
+  background: rgba(250, 204, 21, 0.14);
+  color: var(--amber);
+}
+
+.inventory-status.quarantine {
+  background: rgba(255, 93, 102, 0.14);
+  color: var(--red);
+}
+
+.inventory-status.deployed {
+  background: rgba(96, 165, 250, 0.14);
+  color: var(--blue);
+}
+
+.stock-meter {
+  display: grid;
+  gap: 9px;
+  margin: 0 14px 12px;
+  border: 1px solid rgba(148, 163, 184, 0.13);
+  border-radius: 12px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.stock-meter > div:first-child {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.stock-meter strong {
+  font-size: 1.75rem;
+  line-height: 1;
+}
+
+.stock-meter span,
+.stock-meter small {
+  color: var(--muted);
+  font-size: 0.72rem;
+}
+
+.stock-track {
+  height: 8px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: rgba(148, 163, 184, 0.17);
+}
+
+.stock-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--amber), var(--green));
+}
+
+.cable-detail-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  padding: 0 14px;
+}
+
+.cable-detail-grid span {
+  border: 1px solid rgba(148, 163, 184, 0.1);
+  border-radius: 9px;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.cable-detail-grid small,
+.cable-detail-grid b {
+  display: block;
+}
+
+.cable-detail-grid small {
+  color: var(--muted);
+  font-size: 0.64rem;
+}
+
+.cable-detail-grid b {
+  margin-top: 4px;
+  overflow: hidden;
+  font-size: 0.76rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cable-notes,
+.reorder-list {
+  margin: 10px 14px 0;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 12px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.032);
+}
+
+.cable-notes strong,
+.reorder-list strong {
+  font-size: 0.84rem;
+}
+
+.cable-notes p {
+  margin: 8px 0;
+  color: #d7e5f6;
+  font-size: 0.76rem;
+  line-height: 1.45;
+}
+
+.cable-notes small {
+  color: var(--muted);
+  font-size: 0.68rem;
+}
+
+.reorder-list header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.reorder-list header span {
+  color: var(--amber);
+  font-size: 0.7rem;
+  font-weight: 950;
+}
+
+.reorder-list button {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  border: 0;
+  border-top: 1px solid rgba(148, 163, 184, 0.12);
+  padding: 0;
+  background: transparent;
+  color: #dce9f7;
+  text-align: left;
+}
+
+.reorder-list b,
+.reorder-list small {
+  display: block;
+}
+
+.reorder-list b {
+  font-size: 0.76rem;
+}
+
+.reorder-list small {
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 0.66rem;
+}
+
+.reorder-list em {
+  color: var(--amber);
+  font-size: 0.72rem;
+  font-style: normal;
+  font-weight: 950;
+}
+
+@media (max-width: 1450px) {
+  .cables-toolbar {
+    grid-template-columns: minmax(320px, 1fr) repeat(2, 160px);
+  }
+
+  .cables-workspace {
+    grid-template-columns: minmax(640px, 1fr) minmax(330px, 0.42fr);
+  }
+
+  .cables-head,
+  .cables-table button {
+    grid-template-columns: minmax(170px, 1.25fr) minmax(140px, 1fr) 90px 100px 72px 104px;
+    gap: 9px;
+  }
+}

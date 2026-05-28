@@ -4,6 +4,7 @@ import DashboardPage from "../app/page";
 import "../app/styles.css";
 import "../app/qr-studio.css";
 import "../app/racks.css";
+import "../app/cables.css";
 import "../app/mobile.css";
 import "../app/command.css";
 

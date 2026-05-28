@@ -181,6 +181,28 @@ type RackRecord = {
   qrAssets: string[];
 };
 
+type CableInventoryStatus = "In Stock" | "Low Stock" | "Reserved" | "Deployed" | "Quarantine";
+type CableInventoryCategory = CableKind | "Transceiver";
+
+type CableInventoryItem = {
+  id: string;
+  sku: string;
+  category: CableInventoryCategory;
+  type: string;
+  vendor: string;
+  length: string;
+  connector: string;
+  speed: string;
+  quantity: number;
+  minimum: number;
+  location: string;
+  bin: string;
+  status: CableInventoryStatus;
+  owner: string;
+  lastCounted: string;
+  notes: string;
+};
+
 const navItems: NavItem[] = [
   { label: "Command", icon: "H" },
   { label: "Work Queue", icon: "W", count: 8 },
@@ -455,6 +477,207 @@ const generatedRackFleet: RackRecord[] = Array.from({ length: 28 }).map((_, inde
 });
 
 const rackFleet = [...rackInventory, ...generatedRackFleet];
+
+const cableInventory: CableInventoryItem[] = [
+  {
+    id: "INV-CBL-001",
+    sku: "LC-LC-OS2-2M",
+    category: "Fiber",
+    type: "OS2 single-mode patch cable",
+    vendor: "Corning",
+    length: "2m",
+    connector: "LC-LC",
+    speed: "10G / 25G / 100G",
+    quantity: 184,
+    minimum: 80,
+    location: "DC1 / Room 3",
+    bin: "FIB-A1",
+    status: "In Stock",
+    owner: "Infrastructure",
+    lastCounted: "Today",
+    notes: "Standard yellow patch leads for switch-to-panel runs."
+  },
+  {
+    id: "INV-CBL-002",
+    sku: "LC-LC-OM4-3M",
+    category: "Fiber",
+    type: "OM4 multimode patch cable",
+    vendor: "Panduit",
+    length: "3m",
+    connector: "LC-LC",
+    speed: "10G / 25G / 40G",
+    quantity: 42,
+    minimum: 60,
+    location: "DC1 / Room 4",
+    bin: "FIB-B3",
+    status: "Low Stock",
+    owner: "Data Center",
+    lastCounted: "2 hours ago",
+    notes: "Used heavily for compute row expansions."
+  },
+  {
+    id: "INV-CBL-003",
+    sku: "MPO12-OM4-10M",
+    category: "Fiber",
+    type: "MPO-12 trunk",
+    vendor: "FS",
+    length: "10m",
+    connector: "MPO-MPO",
+    speed: "40G / 100G",
+    quantity: 18,
+    minimum: 12,
+    location: "DC1 / Room 4",
+    bin: "TRK-C2",
+    status: "Reserved",
+    owner: "Network",
+    lastCounted: "Yesterday",
+    notes: "Reserved for GPU fabric uplinks and IB aggregation."
+  },
+  {
+    id: "INV-CBL-004",
+    sku: "DAC-QSFP28-1M",
+    category: "DAC",
+    type: "QSFP28 passive DAC",
+    vendor: "Arista",
+    length: "1m",
+    connector: "QSFP28-QSFP28",
+    speed: "100G",
+    quantity: 76,
+    minimum: 30,
+    location: "DC1 / Room 3",
+    bin: "DAC-A4",
+    status: "In Stock",
+    owner: "Network",
+    lastCounted: "Today",
+    notes: "Primary leaf-to-server short run cable."
+  },
+  {
+    id: "INV-CBL-005",
+    sku: "DAC-SFP28-3M",
+    category: "DAC",
+    type: "SFP28 passive DAC",
+    vendor: "Cisco",
+    length: "3m",
+    connector: "SFP28-SFP28",
+    speed: "25G",
+    quantity: 29,
+    minimum: 40,
+    location: "DC2 / MDF",
+    bin: "DAC-D1",
+    status: "Low Stock",
+    owner: "Network",
+    lastCounted: "May 27",
+    notes: "Keep extra stock for storage and edge nodes."
+  },
+  {
+    id: "INV-CBL-006",
+    sku: "CAT6A-BLU-1FT",
+    category: "Copper",
+    type: "Cat6A copper patch cable",
+    vendor: "Leviton",
+    length: "1ft",
+    connector: "RJ45-RJ45",
+    speed: "1G / 10G",
+    quantity: 312,
+    minimum: 120,
+    location: "Main Store",
+    bin: "COP-A1",
+    status: "In Stock",
+    owner: "Field Ops",
+    lastCounted: "Today",
+    notes: "Blue management-network patch cables."
+  },
+  {
+    id: "INV-CBL-007",
+    sku: "CAT6A-RED-3FT",
+    category: "Copper",
+    type: "Cat6A copper patch cable",
+    vendor: "Belden",
+    length: "3ft",
+    connector: "RJ45-RJ45",
+    speed: "1G / 10G",
+    quantity: 22,
+    minimum: 35,
+    location: "Main Store",
+    bin: "COP-B2",
+    status: "Quarantine",
+    owner: "Field Ops",
+    lastCounted: "May 26",
+    notes: "Hold until failed batch labels are reconciled."
+  },
+  {
+    id: "INV-GBIC-001",
+    sku: "SFP-10G-LR",
+    category: "Transceiver",
+    type: "10G LR SFP+ optic",
+    vendor: "Cisco",
+    length: "10km",
+    connector: "LC",
+    speed: "10G",
+    quantity: 64,
+    minimum: 24,
+    location: "DC1 / Optics Locker",
+    bin: "OPT-A1",
+    status: "In Stock",
+    owner: "Network",
+    lastCounted: "Today",
+    notes: "Long-reach single-mode GBIC/SFP+ pool."
+  },
+  {
+    id: "INV-GBIC-002",
+    sku: "SFP-10G-SR",
+    category: "Transceiver",
+    type: "10G SR SFP+ optic",
+    vendor: "Finisar",
+    length: "300m",
+    connector: "LC",
+    speed: "10G",
+    quantity: 14,
+    minimum: 30,
+    location: "DC1 / Optics Locker",
+    bin: "OPT-A2",
+    status: "Low Stock",
+    owner: "Network",
+    lastCounted: "Today",
+    notes: "Order more before next access-switch rollout."
+  },
+  {
+    id: "INV-GBIC-003",
+    sku: "QSFP-100G-SR4",
+    category: "Transceiver",
+    type: "100G SR4 QSFP28 optic",
+    vendor: "Arista",
+    length: "100m",
+    connector: "MPO",
+    speed: "100G",
+    quantity: 9,
+    minimum: 12,
+    location: "DC1 / Room 4",
+    bin: "OPT-C1",
+    status: "Reserved",
+    owner: "Network",
+    lastCounted: "Yesterday",
+    notes: "Pinned to spine uplink expansion."
+  },
+  {
+    id: "INV-GBIC-004",
+    sku: "QSFP-40G-LR4",
+    category: "Transceiver",
+    type: "40G LR4 QSFP+ optic",
+    vendor: "Juniper",
+    length: "10km",
+    connector: "LC",
+    speed: "40G",
+    quantity: 6,
+    minimum: 8,
+    location: "DC2 / MDF",
+    bin: "OPT-D3",
+    status: "Deployed",
+    owner: "Network",
+    lastCounted: "May 25",
+    notes: "Mostly deployed; keep as replacement stock only."
+  }
+];
 
 const assetTableSchema = `assets
 - id
@@ -830,6 +1053,8 @@ export default function DashboardPage() {
 
         {activeNav === "Racks" ? (
           <RacksPage onOpenScanner={() => setIsScannerOpen(true)} />
+        ) : activeNav === "Cables" ? (
+          <CablesInventoryPage />
         ) : activeNav === "QR Studio" ? (
           <QRStudio initialAsset={selectedAsset} onAssetsChanged={refreshSavedAssets} onOpenScanner={() => setIsScannerOpen(true)} />
         ) : (
@@ -1290,6 +1515,210 @@ function DeviceDetails({ device, selectedCableId }: { device: RackDevice; select
       </div>
     </section>
   );
+}
+
+function CablesInventoryPage() {
+  const [selectedItemId, setSelectedItemId] = useState(cableInventory[0].id);
+  const [inventoryQuery, setInventoryQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState("All Types");
+  const [vendorFilter, setVendorFilter] = useState("All Vendors");
+  const [statusFilter, setStatusFilter] = useState("All Status");
+
+  const vendors = useMemo(() => Array.from(new Set(cableInventory.map((item) => item.vendor))).sort(), []);
+
+  const filteredItems = useMemo(() => {
+    const needle = inventoryQuery.trim().toLowerCase();
+
+    return cableInventory.filter((item) => {
+      const searchable = [item.sku, item.category, item.type, item.vendor, item.connector, item.speed, item.location, item.bin, item.status, item.notes].join(" ").toLowerCase();
+      const matchesQuery = !needle || searchable.includes(needle);
+      const matchesCategory = categoryFilter === "All Types" || item.category === categoryFilter;
+      const matchesVendor = vendorFilter === "All Vendors" || item.vendor === vendorFilter;
+      const matchesStatus = statusFilter === "All Status" || item.status === statusFilter;
+
+      return matchesQuery && matchesCategory && matchesVendor && matchesStatus;
+    });
+  }, [categoryFilter, inventoryQuery, statusFilter, vendorFilter]);
+
+  const selectedItem = filteredItems.find((item) => item.id === selectedItemId) ?? filteredItems[0] ?? cableInventory[0];
+
+  const inventoryStats = useMemo(() => {
+    const totalUnits = filteredItems.reduce((sum, item) => sum + item.quantity, 0);
+    const lowStock = filteredItems.filter((item) => item.quantity < item.minimum || item.status === "Low Stock").length;
+    const transceivers = filteredItems.filter((item) => item.category === "Transceiver").reduce((sum, item) => sum + item.quantity, 0);
+    const reserved = filteredItems.filter((item) => item.status === "Reserved").reduce((sum, item) => sum + item.quantity, 0);
+    const vendorsCount = new Set(filteredItems.map((item) => item.vendor)).size;
+
+    return { totalUnits, lowStock, transceivers, reserved, vendorsCount };
+  }, [filteredItems]);
+
+  const reorderItems = useMemo(() => cableInventory.filter((item) => item.quantity < item.minimum || item.status === "Low Stock"), []);
+
+  return (
+    <section className="cables-page">
+      <header className="racks-hero cables-hero">
+        <div>
+          <p>Inventory</p>
+          <h1>Cables & GBICs</h1>
+          <span>Stock control for fiber, DAC, copper, SFP and QSFP optics</span>
+        </div>
+        <div className="racks-actions">
+          <button type="button">Add Item</button>
+          <button type="button">Cycle Count</button>
+          <button type="button">Export CSV</button>
+        </div>
+      </header>
+
+      <section className="dc-command-strip cables-kpis">
+        <article>
+          <span>Total Units</span>
+          <strong>{inventoryStats.totalUnits.toLocaleString()}</strong>
+          <small>{filteredItems.length} active SKUs</small>
+        </article>
+        <article className={inventoryStats.lowStock ? "warning" : ""}>
+          <span>Low Stock</span>
+          <strong>{inventoryStats.lowStock}</strong>
+          <small>Below minimum or reorder flagged</small>
+        </article>
+        <article>
+          <span>GBIC / Optics</span>
+          <strong>{inventoryStats.transceivers}</strong>
+          <small>SFP, SFP+, QSFP and QSFP28</small>
+        </article>
+        <article>
+          <span>Reserved</span>
+          <strong>{inventoryStats.reserved}</strong>
+          <small>Held for planned work</small>
+        </article>
+        <article>
+          <span>Vendors</span>
+          <strong>{inventoryStats.vendorsCount}</strong>
+          <small>Filtered supplier set</small>
+        </article>
+      </section>
+
+      <section className="rack-toolbar cables-toolbar ops-card">
+        <input value={inventoryQuery} onChange={(event) => setInventoryQuery(event.target.value)} placeholder="Search SKU, vendor, speed, connector, bin..." />
+        <select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)}>
+          <option>All Types</option>
+          <option>Fiber</option>
+          <option>DAC</option>
+          <option>Copper</option>
+          <option>Transceiver</option>
+        </select>
+        <select value={vendorFilter} onChange={(event) => setVendorFilter(event.target.value)}>
+          <option>All Vendors</option>
+          {vendors.map((vendor) => (
+            <option key={vendor}>{vendor}</option>
+          ))}
+        </select>
+        <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+          <option>All Status</option>
+          <option>In Stock</option>
+          <option>Low Stock</option>
+          <option>Reserved</option>
+          <option>Deployed</option>
+          <option>Quarantine</option>
+        </select>
+      </section>
+
+      <div className="cables-workspace">
+        <section className="ops-card cables-table-card">
+          <header>
+            <h2>Inventory Ledger</h2>
+            <button type="button">{filteredItems.length} SKUs</button>
+          </header>
+          <div className="cables-table">
+            <div className="cables-head">
+              <span>SKU</span>
+              <span>Type</span>
+              <span>Vendor</span>
+              <span>Speed</span>
+              <span>Qty</span>
+              <span>Status</span>
+            </div>
+            {filteredItems.map((item) => (
+              <button className={selectedItem.id === item.id ? "active" : ""} key={item.id} onClick={() => setSelectedItemId(item.id)} type="button">
+                <span>
+                  <b>{item.sku}</b>
+                  <small>{item.bin} / {item.location}</small>
+                </span>
+                <span>
+                  <b>{item.category}</b>
+                  <small>{item.connector} / {item.length}</small>
+                </span>
+                <span>{item.vendor}</span>
+                <span>{item.speed}</span>
+                <span className={item.quantity < item.minimum ? "qty-low" : ""}>
+                  <b>{item.quantity}</b>
+                  <small>min {item.minimum}</small>
+                </span>
+                <InventoryStatusBadge status={item.status} />
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <aside className="ops-card cable-detail-panel">
+          <header>
+            <div>
+              <h2>{selectedItem.sku}</h2>
+              <span>{selectedItem.type}</span>
+            </div>
+            <InventoryStatusBadge status={selectedItem.status} />
+          </header>
+
+          <div className="stock-meter">
+            <div>
+              <strong>{selectedItem.quantity}</strong>
+              <span>available units</span>
+            </div>
+            <div className="stock-track">
+              <span style={{ width: `${Math.min(100, Math.round((selectedItem.quantity / Math.max(selectedItem.minimum * 2, 1)) * 100))}%` }} />
+            </div>
+            <small>Minimum stock: {selectedItem.minimum}</small>
+          </div>
+
+          <div className="cable-detail-grid">
+            <span><small>Category</small><b>{selectedItem.category}</b></span>
+            <span><small>Vendor</small><b>{selectedItem.vendor}</b></span>
+            <span><small>Connector</small><b>{selectedItem.connector}</b></span>
+            <span><small>Speed</small><b>{selectedItem.speed}</b></span>
+            <span><small>Length / Reach</small><b>{selectedItem.length}</b></span>
+            <span><small>Bin</small><b>{selectedItem.bin}</b></span>
+            <span><small>Location</small><b>{selectedItem.location}</b></span>
+            <span><small>Owner</small><b>{selectedItem.owner}</b></span>
+          </div>
+
+          <section className="cable-notes">
+            <strong>Handling Notes</strong>
+            <p>{selectedItem.notes}</p>
+            <small>Last counted: {selectedItem.lastCounted}</small>
+          </section>
+
+          <section className="reorder-list">
+            <header>
+              <strong>Reorder Watch</strong>
+              <span>{reorderItems.length} items</span>
+            </header>
+            {reorderItems.slice(0, 5).map((item) => (
+              <button key={item.id} onClick={() => setSelectedItemId(item.id)} type="button">
+                <span>
+                  <b>{item.sku}</b>
+                  <small>{item.vendor} / {item.connector}</small>
+                </span>
+                <em>{item.quantity} / {item.minimum}</em>
+              </button>
+            ))}
+          </section>
+        </aside>
+      </div>
+    </section>
+  );
+}
+
+function InventoryStatusBadge({ status }: { status: CableInventoryStatus }) {
+  return <em className={`inventory-status ${status.toLowerCase().replace(" ", "-")}`}>{status}</em>;
 }
 
 function QRScanModal({
