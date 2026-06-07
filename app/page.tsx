@@ -204,9 +204,9 @@ type CableInventoryItem = {
 };
 
 const navItems: NavItem[] = [
+  { label: "Command", icon: "H" },
   { label: "QR Studio", icon: "Q" },
   { label: "Assets", icon: "A" },
-  { label: "Command", icon: "H" },
   { label: "Work Queue", icon: "W", count: 8 },
   { label: "Technicians", icon: "T" },
   { label: "Racks", icon: "R" },
@@ -285,10 +285,10 @@ const offlineDevices: OfflineDevice[] = [
 const quickActions: QuickAction[] = [
   { id: "scan", title: "Scan QR Code", detail: "Identify an asset", icon: "QR", tone: "purple" },
   { id: "rack-audit", title: "Start Rack Audit", detail: "Create new audit", icon: "RA", tone: "amber" },
-  { id: "print-labels", title: "Print QR Labels", detail: "Batch print labels", icon: "PR", tone: "slate" },
+  { id: "print-labels", title: "Create Asset + QR", detail: "New asset workflow", icon: "QA", tone: "slate" },
   { id: "work-order", title: "Create Work Order", detail: "New work order", icon: "WO", tone: "green" },
   { id: "fiber-test", title: "Validate Fiber Link", detail: "Run signal test", icon: "FL", tone: "blue" },
-  { id: "import-assets", title: "Import Assets", detail: "From Excel or CSV", icon: "IM", tone: "blue" }
+  { id: "import-assets", title: "Find / Import Assets", detail: "Search registry", icon: "AS", tone: "blue" }
 ];
 
 const assetTypes = ["Device", "Rack", "Fiber Cable", "Copper Cable", "Patch Panel", "UPS", "PDU", "Switch", "Server", "Storage", "Other"];
@@ -1045,7 +1045,7 @@ async function getAssetDatabase(): Promise<AssetDatabaseApi> {
 }
 
 export default function DashboardPage() {
-  const [activeNav, setActiveNav] = useState("QR Studio");
+  const [activeNav, setActiveNav] = useState("Command");
   const [workFilter, setWorkFilter] = useState("All");
   const [query, setQuery] = useState("");
   const [savedAssets, setSavedAssets] = useState<AssetRecord[]>([]);
@@ -1053,7 +1053,7 @@ export default function DashboardPage() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [scanMessage, setScanMessage] = useState("Point the camera at a PatchPilot QR label.");
-  const [actionNotice, setActionNotice] = useState("Create an asset, generate its QR, then save it into the asset registry.");
+  const [actionNotice, setActionNotice] = useState("Command center is live. Use Create Asset + QR to open the QR workflow.");
 
   async function refreshSavedAssets() {
     try {
