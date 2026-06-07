@@ -183,6 +183,10 @@
     gap: 8px;
   }
 
+  .qr-workflow-strip {
+    grid-template-columns: 1fr;
+  }
+
   .racks-actions button,
   .qr-head-actions button {
     min-height: 42px;
