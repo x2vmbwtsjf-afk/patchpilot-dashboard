@@ -1231,58 +1231,62 @@ export default function DashboardPage() {
       </aside>
 
       <section className="ops-main">
-        <header className="topbar">
-          <div className="search-box global-search">
-            <span>Search</span>
-            <input
-              value={query}
-              onBlur={() => window.setTimeout(() => setIsSearchOpen(false), 140)}
-              onChange={(event) => {
-                setQuery(event.target.value);
-                setIsSearchOpen(true);
-              }}
-              onFocus={() => setIsSearchOpen(true)}
-              placeholder="Scan or search QR ID, asset name, IP, serial, rack, port..."
-            />
-            <kbd>CMD K</kbd>
-            {isSearchOpen && query.trim() && (
-              <div className="global-search-menu">
-                <div className="global-search-title">
-                  <strong>QR Registry</strong>
-                  <span>{searchAssets.length ? `${searchAssets.length} found` : "No asset match"}</span>
-                </div>
-                {searchAssets.map((asset) => (
-                  <button key={asset.id} onMouseDown={(event) => event.preventDefault()} onClick={() => openAssetFromSearch(asset)} type="button">
-                    <span className="search-result-icon">QR</span>
-                    <span>
-                      <strong>{asset.name || asset.id}</strong>
-                      <small>{asset.id} / {asset.assetType} / {asset.rack || asset.site || "No location"}</small>
-                    </span>
-                    <em>{asset.ipAddress || asset.serial || asset.macAddress || "Open"}</em>
-                  </button>
-                ))}
-                {!searchAssets.length && (
-                  <p>Try QR ID, asset name, IP address, rack, serial number, MAC address, VLAN, switch port, or tag.</p>
+        {activeNav !== "QR Studio" && (
+          <>
+            <header className="topbar">
+              <div className="search-box global-search">
+                <span>Search</span>
+                <input
+                  value={query}
+                  onBlur={() => window.setTimeout(() => setIsSearchOpen(false), 140)}
+                  onChange={(event) => {
+                    setQuery(event.target.value);
+                    setIsSearchOpen(true);
+                  }}
+                  onFocus={() => setIsSearchOpen(true)}
+                  placeholder="Scan or search QR ID, asset name, IP, serial, rack, port..."
+                />
+                <kbd>CMD K</kbd>
+                {isSearchOpen && query.trim() && (
+                  <div className="global-search-menu">
+                    <div className="global-search-title">
+                      <strong>QR Registry</strong>
+                      <span>{searchAssets.length ? `${searchAssets.length} found` : "No asset match"}</span>
+                    </div>
+                    {searchAssets.map((asset) => (
+                      <button key={asset.id} onMouseDown={(event) => event.preventDefault()} onClick={() => openAssetFromSearch(asset)} type="button">
+                        <span className="search-result-icon">QR</span>
+                        <span>
+                          <strong>{asset.name || asset.id}</strong>
+                          <small>{asset.id} / {asset.assetType} / {asset.rack || asset.site || "No location"}</small>
+                        </span>
+                        <em>{asset.ipAddress || asset.serial || asset.macAddress || "Open"}</em>
+                      </button>
+                    ))}
+                    {!searchAssets.length && (
+                      <p>Try QR ID, asset name, IP address, rack, serial number, MAC address, VLAN, switch port, or tag.</p>
+                    )}
+                  </div>
                 )}
               </div>
-            )}
-          </div>
-          <div className="topbar-right">
-            <span className="online-dot" />
-            <strong>Online</strong>
-            <button className="bell" type="button">5</button>
-            <button className="help" type="button">?</button>
-            <div className="user-chip">
-              <span>DM</span>
-              <div>
-                <strong>David M.</strong>
-                <small>Operations Lead</small>
+              <div className="topbar-right">
+                <span className="online-dot" />
+                <strong>Online</strong>
+                <button className="bell" type="button">5</button>
+                <button className="help" type="button">?</button>
+                <div className="user-chip">
+                  <span>DM</span>
+                  <div>
+                    <strong>David M.</strong>
+                    <small>Operations Lead</small>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-        </header>
+            </header>
 
-        <p className="action-notice">{actionNotice}</p>
+            <p className="action-notice">{actionNotice}</p>
+          </>
+        )}
 
         {activeNav === "Racks" ? (
           <RacksPage onOpenScanner={() => setIsScannerOpen(true)} />
@@ -2434,25 +2438,16 @@ function QRStudio({
   const [database, setDatabase] = useState<AssetDatabaseApi | null>(null);
   const [search, setSearch] = useState("");
   const [scanValue, setScanValue] = useState("");
-  const [message, setMessage] = useState("Database ready");
+  const [, setMessage] = useState("Database ready");
 
   const qrPayload = useMemo(() => getQrPayload(asset), [asset]);
   const selectedAssetKind = asset.assetType === "Rack" ? "Rack" : asset.assetType.includes("Cable") ? "Cable" : "Server";
-  const qrTitle = asset.name.trim() || `${selectedAssetKind} ${asset.id}`;
   const indexedAssets = useMemo(() => {
     const byId = new Map<string, AssetRecord>();
     registryAssets.forEach((item) => byId.set(item.id, item));
     assets.forEach((item) => byId.set(item.id, item));
     return Array.from(byId.values()).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   }, [assets, registryAssets]);
-
-  const qrStats = useMemo(() => {
-    const saved = indexedAssets.length;
-    const qrLinked = indexedAssets.filter((item) => item.qrCode).length;
-    const missingLocation = indexedAssets.filter((item) => !item.rack && !item.room).length;
-
-    return { saved, qrLinked, missingLocation };
-  }, [indexedAssets]);
 
   const matchingAssets = useMemo(() => {
     const needle = search.trim().toLowerCase();
@@ -2595,44 +2590,13 @@ function QRStudio({
 
   return (
     <section className="qr-studio">
-      <div className="qr-studio-head">
-        <div>
-          <p>QR Studio</p>
-          <h1>New QR Asset</h1>
-          <span>{message}</span>
-        </div>
-        <div className="qr-head-actions">
-          <button onClick={startNewAsset} type="button">New</button>
-          <button onClick={onOpenScanner} type="button">Scan</button>
-        </div>
-      </div>
-
       <section className="ops-card qr-create-stage">
-        <header>
-          <div>
-            <p>Generated QR</p>
-            <h2>{qrTitle}</h2>
-            <span>{asset.id} is the lookup key saved to the DB.</span>
-          </div>
-          <button onClick={createQr} type="button">Regenerate</button>
-        </header>
-
         <div className="qr-create-body">
           <div className="qr-code-box qr-code-primary">
             {qrImage ? <img alt="Asset QR code" src={qrImage} /> : <span>Generating QR</span>}
           </div>
 
           <div className="qr-create-controls">
-            <div className="label-preview print-label">
-              <div>
-                <strong>{qrTitle}</strong>
-                <span>{selectedAssetKind} / {asset.id}</span>
-              </div>
-              {qrImage && <img alt="Printable asset QR code" src={qrImage} />}
-              <small>{asset.site || "Site"} {asset.room && `/ ${asset.room}`} {asset.rack && `/ ${asset.rack}`} {asset.ruPosition && `/ RU ${asset.ruPosition}`}</small>
-              <em>{qrPayload}</em>
-            </div>
-
             <div className="asset-kind-picker" aria-label="Asset type">
               {(["Server", "Rack", "Cable"] as const).map((kind) => (
                 <button className={selectedAssetKind === kind ? "active" : ""} key={kind} onClick={() => selectAssetKind(kind)} type="button">
@@ -2646,8 +2610,6 @@ function QRStudio({
               <button onClick={printLabel} type="button">Print</button>
               <button onClick={onOpenScanner} type="button">Scan</button>
             </div>
-
-            <small className="qr-create-meta">{qrStats.saved} records indexed / {qrStats.qrLinked} QR-linked</small>
           </div>
         </div>
       </section>

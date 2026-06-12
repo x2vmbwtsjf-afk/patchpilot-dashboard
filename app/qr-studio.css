@@ -281,24 +281,26 @@
 
 .qr-create-body {
   display: grid;
-  grid-template-columns: minmax(230px, 0.72fr) minmax(0, 1fr);
-  gap: 12px;
-  padding: 0 14px 14px;
+  grid-template-columns: 1fr;
+  gap: 10px;
+  width: min(100%, 520px);
+  margin: 0 auto;
+  padding: 14px;
 }
 
 .qr-code-primary {
-  min-height: 250px;
+  min-height: 330px;
   margin: 0;
 }
 
 .qr-code-primary img {
-  width: min(100%, 238px);
+  width: min(100%, 300px);
 }
 
 .qr-create-controls {
   display: grid;
   align-content: start;
-  gap: 10px;
+  gap: 8px;
 }
 
 .qr-create-controls .label-preview {
