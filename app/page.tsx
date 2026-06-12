@@ -699,9 +699,9 @@ const assetTableSchema = `assets
 - created_at
 - updated_at`;
 
-const emptyAsset = (): AssetRecord => {
+function createAssetDraft(id: string, scannedValue = ""): AssetRecord {
   const now = new Date().toISOString();
-  const id = createAssetId();
+  const sourceNote = scannedValue && scannedValue !== id ? `Scanned source: ${scannedValue}` : "";
 
   return {
     id,
@@ -723,13 +723,15 @@ const emptyAsset = (): AssetRecord => {
     connectorType: "",
     from: "",
     to: "",
-    notes: "",
+    notes: sourceNote,
     tags: "",
     owner: "Operations",
     createdAt: now,
     updatedAt: now
   };
-};
+}
+
+const emptyAsset = (): AssetRecord => createAssetDraft(createAssetId());
 
 const demoAssetInventory: AssetRecord[] = [
   {
@@ -1123,7 +1125,21 @@ export default function DashboardPage() {
       const fallbackAsset = demoAssetInventory.find((asset) => asset.id === id || asset.qrCode === id);
 
       if (!found && !fallbackAsset) {
-        setScanMessage(`No saved asset found for ${id}. Save the asset in QR Studio first.`);
+        const shouldCreate = window.confirm(`No asset found for ${id}. Create a new asset with this QR/RFID code?`);
+
+        if (shouldCreate) {
+          setSelectedAsset(createAssetDraft(id, value.trim()));
+          setActiveNav("QR Studio");
+          setQuery("");
+          setIsSearchOpen(false);
+          setIsScannerOpen(false);
+          setActionNotice(`New asset started from scanned code ${id}.`);
+          setScanMessage(`Create new asset for ${id}`);
+          return;
+        }
+
+        setIsScannerOpen(false);
+        setScanMessage(`No asset found for ${id}.`);
         return;
       }
 
@@ -1180,7 +1196,8 @@ export default function DashboardPage() {
     }
   }
 
-  const isQrCreationView = activeNav === "QR Studio" && selectedAsset === null;
+  const isSelectedAssetSaved = selectedAsset ? allAssets.some((asset) => asset.id === selectedAsset.id || asset.qrCode === selectedAsset.id) : false;
+  const isQrCreationView = activeNav === "QR Studio" && (!selectedAsset || !isSelectedAssetSaved);
 
   return (
     <main className="ops-shell">
@@ -2497,8 +2514,7 @@ function QRStudio({
 
   function startNewAsset() {
     const id = createAssetId();
-    const now = new Date().toISOString();
-    setAsset({ ...emptyAsset(), id, qrCode: id, createdAt: now, updatedAt: now });
+    setAsset(createAssetDraft(id));
     setSearch("");
     setScanValue("");
     setMessage(`New asset started with QR ${id}`);
@@ -2563,15 +2579,28 @@ function QRStudio({
     if (!database) return;
     const id = normalizeAssetLookup(scanValue);
     const found = await database.getById(id);
+    const fallbackAsset = indexedAssets.find((item) => item.id === id || item.qrCode === id);
+    const resolvedAsset = found ?? fallbackAsset;
 
-    if (!found) {
+    if (!resolvedAsset) {
+      const shouldCreate = window.confirm(`No asset found for ${id}. Create a new asset with this QR/RFID code?`);
+
+      if (shouldCreate) {
+        const draft = createAssetDraft(id, scanValue.trim());
+        setAsset(draft);
+        setSearch("");
+        setScanValue("");
+        setMessage(`New asset started from scanned code ${id}`);
+        return;
+      }
+
       setMessage(`No asset found for ${id}`);
       return;
     }
 
-    setAsset(found);
-    setSearch(found.id);
-    setMessage(`Opened ${found.id}`);
+    setAsset(resolvedAsset);
+    setSearch(resolvedAsset.id);
+    setMessage(`Opened ${resolvedAsset.id}`);
   }
 
   function printLabel() {
