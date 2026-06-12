@@ -706,7 +706,7 @@ const emptyAsset = (): AssetRecord => {
   return {
     id,
     qrCode: id,
-    assetType: "Device",
+    assetType: "Server",
     name: "",
     serial: "",
     status: "Active",
@@ -2437,6 +2437,8 @@ function QRStudio({
   const [message, setMessage] = useState("Database ready");
 
   const qrPayload = useMemo(() => getQrPayload(asset), [asset]);
+  const selectedAssetKind = asset.assetType === "Rack" ? "Rack" : asset.assetType.includes("Cable") ? "Cable" : "Server";
+  const qrTitle = asset.name.trim() || `${selectedAssetKind} ${asset.id}`;
   const indexedAssets = useMemo(() => {
     const byId = new Map<string, AssetRecord>();
     registryAssets.forEach((item) => byId.set(item.id, item));
@@ -2510,6 +2512,14 @@ function QRStudio({
     const now = new Date().toISOString();
     setAsset((current) => ({ ...current, id, qrCode: id, createdAt: now, updatedAt: now }));
     setMessage(`QR regenerated as ${id}`);
+  }
+
+  function selectAssetKind(kind: "Server" | "Rack" | "Cable") {
+    setAsset((current) => ({
+      ...current,
+      assetType: kind === "Cable" ? "Fiber Cable" : kind,
+      updatedAt: new Date().toISOString()
+    }));
   }
 
   async function saveAsset(target = asset) {
@@ -2588,105 +2598,135 @@ function QRStudio({
       <div className="qr-studio-head">
         <div>
           <p>QR Studio</p>
-          <h1>Create QR + Save to DB</h1>
+          <h1>New QR Asset</h1>
           <span>{message}</span>
         </div>
         <div className="qr-head-actions">
           <button onClick={startNewAsset} type="button">New</button>
           <button onClick={onOpenScanner} type="button">Scan</button>
-          <button onClick={() => void saveAsset()} type="button">Save to DB</button>
-          <button onClick={printLabel} type="button">Print</button>
         </div>
       </div>
 
-      <section className="qr-workflow-strip">
-        <article>
-          <span>1</span>
+      <section className="ops-card qr-create-stage">
+        <header>
           <div>
-            <strong>Generate QR</strong>
-            <small>Every record starts with a unique QR identity.</small>
+            <p>Generated QR</p>
+            <h2>{qrTitle}</h2>
+            <span>{asset.id} is the lookup key saved to the DB.</span>
           </div>
-        </article>
-        <article>
-          <span>2</span>
-          <div>
-            <strong>Save to DB</strong>
-            <small>Store name, serial, rack, network and owner fields.</small>
+          <button onClick={createQr} type="button">Regenerate</button>
+        </header>
+
+        <div className="qr-create-body">
+          <div className="qr-code-box qr-code-primary">
+            {qrImage ? <img alt="Asset QR code" src={qrImage} /> : <span>Generating QR</span>}
           </div>
-        </article>
-        <article>
-          <span>3</span>
-          <div>
-            <strong>Scan + retrieve</strong>
-            <small>Scan the label to open the saved asset payload.</small>
+
+          <div className="qr-create-controls">
+            <div className="label-preview print-label">
+              <div>
+                <strong>{qrTitle}</strong>
+                <span>{selectedAssetKind} / {asset.id}</span>
+              </div>
+              {qrImage && <img alt="Printable asset QR code" src={qrImage} />}
+              <small>{asset.site || "Site"} {asset.room && `/ ${asset.room}`} {asset.rack && `/ ${asset.rack}`} {asset.ruPosition && `/ RU ${asset.ruPosition}`}</small>
+              <em>{qrPayload}</em>
+            </div>
+
+            <div className="asset-kind-picker" aria-label="Asset type">
+              {(["Server", "Rack", "Cable"] as const).map((kind) => (
+                <button className={selectedAssetKind === kind ? "active" : ""} key={kind} onClick={() => selectAssetKind(kind)} type="button">
+                  {kind}
+                </button>
+              ))}
+            </div>
+
+            <div className="qr-primary-actions">
+              <button onClick={() => void saveAsset()} type="button">Save to DB</button>
+              <button onClick={printLabel} type="button">Print</button>
+              <button onClick={onOpenScanner} type="button">Scan</button>
+            </div>
+
+            <small className="qr-create-meta">{qrStats.saved} records indexed / {qrStats.qrLinked} QR-linked</small>
           </div>
-        </article>
-        <article>
-          <span>{qrStats.qrLinked}</span>
-          <div>
-            <strong>Retrievable records</strong>
-            <small>{qrStats.saved} indexed / {qrStats.missingLocation} need location.</small>
-          </div>
-        </article>
+        </div>
       </section>
 
       <div className="qr-layout">
         <section className="ops-card qr-editor-card">
           <header>
             <div>
-              <h2>QR Payload Editor</h2>
-              <span>{asset.id} is the lookup key saved in the browser database.</span>
+              <h2>{selectedAssetKind} Details</h2>
+              <span>Fill only the fields needed for this QR asset type, then save to DB.</span>
             </div>
-            <button onClick={createQr} type="button">Regenerate QR</button>
           </header>
 
           <div className="form-section">
-            <h3>Basic</h3>
+            <h3>Identity</h3>
             <div className="field-grid">
-              <Field label="Asset Name" value={asset.name} onChange={(value) => updateAsset("name", value)} />
-              <SelectField label="Asset Type" value={asset.assetType} options={assetTypes} onChange={(value) => updateAsset("assetType", value)} />
-              <Field label="QR ID" value={asset.id} onChange={(value) => updateAsset("id", value)} />
-              <Field label="Serial Number" value={asset.serial} onChange={(value) => updateAsset("serial", value)} />
+              <Field label={`${selectedAssetKind} Name`} value={asset.name} onChange={(value) => updateAsset("name", value)} />
+              <Field label="QR ID" value={asset.id} readOnly />
               <SelectField label="Status" value={asset.status} options={assetStatuses} onChange={(value) => updateAsset("status", value as AssetStatus)} />
             </div>
           </div>
 
-          <div className="form-section">
-            <h3>Location</h3>
-            <div className="field-grid">
-              <Field label="Site" value={asset.site} onChange={(value) => updateAsset("site", value)} />
-              <Field label="Room" value={asset.room} onChange={(value) => updateAsset("room", value)} />
-              <Field label="Rack" value={asset.rack} onChange={(value) => updateAsset("rack", value)} />
-              <Field label="RU Position" value={asset.ruPosition} onChange={(value) => updateAsset("ruPosition", value)} />
+          {selectedAssetKind === "Server" && (
+            <>
+              <div className="form-section">
+                <h3>Server</h3>
+                <div className="field-grid">
+                  <Field label="Serial Number" value={asset.serial} onChange={(value) => updateAsset("serial", value)} />
+                  <Field label="Site" value={asset.site} onChange={(value) => updateAsset("site", value)} />
+                  <Field label="Room" value={asset.room} onChange={(value) => updateAsset("room", value)} />
+                  <Field label="Rack" value={asset.rack} onChange={(value) => updateAsset("rack", value)} />
+                  <Field label="RU Position" value={asset.ruPosition} onChange={(value) => updateAsset("ruPosition", value)} />
+                  <Field label="Owner" value={asset.owner} onChange={(value) => updateAsset("owner", value)} />
+                </div>
+              </div>
+
+              <div className="form-section">
+                <h3>Network</h3>
+                <div className="field-grid">
+                  <Field label="IP Address" value={asset.ipAddress} onChange={(value) => updateAsset("ipAddress", value)} />
+                  <Field label="MAC Address" value={asset.macAddress} onChange={(value) => updateAsset("macAddress", value)} />
+                  <Field label="VLAN" value={asset.vlan} onChange={(value) => updateAsset("vlan", value)} />
+                  <Field label="Switch Port" value={asset.switchPort} onChange={(value) => updateAsset("switchPort", value)} />
+                </div>
+              </div>
+            </>
+          )}
+
+          {selectedAssetKind === "Rack" && (
+            <div className="form-section">
+              <h3>Rack</h3>
+              <div className="field-grid">
+                <Field label="Site" value={asset.site} onChange={(value) => updateAsset("site", value)} />
+                <Field label="Room" value={asset.room} onChange={(value) => updateAsset("room", value)} />
+                <Field label="Rack / Row" value={asset.rack} onChange={(value) => updateAsset("rack", value)} />
+                <Field label="Owner" value={asset.owner} onChange={(value) => updateAsset("owner", value)} />
+                <Field label="Tags" value={asset.tags} onChange={(value) => updateAsset("tags", value)} />
+              </div>
             </div>
-          </div>
+          )}
+
+          {selectedAssetKind === "Cable" && (
+            <div className="form-section">
+              <h3>Cable</h3>
+              <div className="field-grid">
+                <Field label="Cable Type" value={asset.cableType} onChange={(value) => updateAsset("cableType", value)} />
+                <Field label="Length" value={asset.length} onChange={(value) => updateAsset("length", value)} />
+                <Field label="Connector Type" value={asset.connectorType} onChange={(value) => updateAsset("connectorType", value)} />
+                <Field label="From" value={asset.from} onChange={(value) => updateAsset("from", value)} />
+                <Field label="To" value={asset.to} onChange={(value) => updateAsset("to", value)} />
+                <Field label="Rack / Path" value={asset.rack} onChange={(value) => updateAsset("rack", value)} />
+                <Field label="Owner" value={asset.owner} onChange={(value) => updateAsset("owner", value)} />
+              </div>
+            </div>
+          )}
 
           <div className="form-section">
-            <h3>Network</h3>
+            <h3>Notes</h3>
             <div className="field-grid">
-              <Field label="IP Address" value={asset.ipAddress} onChange={(value) => updateAsset("ipAddress", value)} />
-              <Field label="MAC Address" value={asset.macAddress} onChange={(value) => updateAsset("macAddress", value)} />
-              <Field label="VLAN" value={asset.vlan} onChange={(value) => updateAsset("vlan", value)} />
-              <Field label="Switch Port" value={asset.switchPort} onChange={(value) => updateAsset("switchPort", value)} />
-            </div>
-          </div>
-
-          <div className="form-section">
-            <h3>Cable</h3>
-            <div className="field-grid">
-              <Field label="Cable Type" value={asset.cableType} onChange={(value) => updateAsset("cableType", value)} />
-              <Field label="Length" value={asset.length} onChange={(value) => updateAsset("length", value)} />
-              <Field label="Connector Type" value={asset.connectorType} onChange={(value) => updateAsset("connectorType", value)} />
-              <Field label="From" value={asset.from} onChange={(value) => updateAsset("from", value)} />
-              <Field label="To" value={asset.to} onChange={(value) => updateAsset("to", value)} />
-            </div>
-          </div>
-
-          <div className="form-section">
-            <h3>Additional</h3>
-            <div className="field-grid">
-              <Field label="Owner" value={asset.owner} onChange={(value) => updateAsset("owner", value)} />
-              <Field label="Tags" value={asset.tags} onChange={(value) => updateAsset("tags", value)} />
               <Field label="Last Updated" value={new Date(asset.updatedAt).toLocaleString()} readOnly />
               <label className="field wide-field">
                 <span>Notes</span>
@@ -2697,33 +2737,6 @@ function QRStudio({
         </section>
 
         <aside className="qr-side">
-          <section className="ops-card qr-preview-card">
-            <header>
-              <h2>QR Label Output</h2>
-              <button onClick={downloadQr} type="button">Download QR</button>
-            </header>
-
-            <div className="qr-code-box">
-              {qrImage ? <img alt="Asset QR code" src={qrImage} /> : <span>Generating QR</span>}
-            </div>
-
-            <div className="label-preview print-label">
-              <div>
-                <strong>{asset.name || "Unnamed Asset"}</strong>
-                <span>{asset.assetType} / {asset.id}</span>
-              </div>
-              {qrImage && <img alt="Printable asset QR code" src={qrImage} />}
-              <small>{asset.site || "Site"} {asset.room && `/ ${asset.room}`} {asset.rack && `/ ${asset.rack}`} {asset.ruPosition && `/ RU ${asset.ruPosition}`}</small>
-              <em>{qrPayload}</em>
-            </div>
-
-            <div className="qr-action-grid">
-              <button onClick={printLabel} type="button">Print Label</button>
-              <button onClick={downloadQr} type="button">Download QR</button>
-              <button onClick={() => void duplicateAsset()} type="button">Duplicate Asset</button>
-            </div>
-          </section>
-
           <section className="ops-card asset-search-card">
             <header>
               <div>
@@ -2752,9 +2765,10 @@ function QRStudio({
 
           <section className="ops-card qr-schema-card">
             <header>
-              <h2>Database Schema</h2>
+              <h2>QR Payload</h2>
+              <button onClick={downloadQr} type="button">Download</button>
             </header>
-            <pre>{assetTableSchema}</pre>
+            <pre>{qrPayload}</pre>
           </section>
         </aside>
       </div>
