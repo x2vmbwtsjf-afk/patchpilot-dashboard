@@ -172,7 +172,7 @@
 }
 
 .qr-head-actions button:first-child,
-.qr-head-actions button:nth-child(3),
+.qr-head-actions button:nth-child(2),
 .asset-search-tools button {
   border-color: rgba(125, 211, 252, 0.44);
   background: linear-gradient(135deg, var(--blue), var(--cyan));

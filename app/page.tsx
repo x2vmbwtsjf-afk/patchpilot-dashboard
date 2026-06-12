@@ -284,11 +284,11 @@ const offlineDevices: OfflineDevice[] = [
 
 const quickActions: QuickAction[] = [
   { id: "scan", title: "Scan QR Code", detail: "Identify an asset", icon: "QR", tone: "purple" },
-  { id: "rack-audit", title: "Start Rack Audit", detail: "Create new audit", icon: "RA", tone: "amber" },
-  { id: "print-labels", title: "Create Asset + QR", detail: "New asset workflow", icon: "QA", tone: "slate" },
+  { id: "print-labels", title: "Create + Save QR", detail: "Asset to DB", icon: "DB", tone: "slate" },
+  { id: "import-assets", title: "Lookup Registry", detail: "Find by QR data", icon: "LU", tone: "blue" },
+  { id: "rack-audit", title: "Start Rack Audit", detail: "Verify by QR", icon: "RA", tone: "amber" },
   { id: "work-order", title: "Create Work Order", detail: "New work order", icon: "WO", tone: "green" },
-  { id: "fiber-test", title: "Validate Fiber Link", detail: "Run signal test", icon: "FL", tone: "blue" },
-  { id: "import-assets", title: "Find / Import Assets", detail: "Search registry", icon: "AS", tone: "blue" }
+  { id: "fiber-test", title: "Validate Fiber Link", detail: "Run signal test", icon: "FL", tone: "blue" }
 ];
 
 const assetTypes = ["Device", "Rack", "Fiber Cable", "Copper Cable", "Patch Panel", "UPS", "PDU", "Switch", "Server", "Storage", "Other"];
@@ -1053,7 +1053,7 @@ export default function DashboardPage() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [scanMessage, setScanMessage] = useState("Point the camera at a PatchPilot QR label.");
-  const [actionNotice, setActionNotice] = useState("Command center is live. Use Create Asset + QR to open the QR workflow.");
+  const [actionNotice, setActionNotice] = useState("Choose New to create a QR asset, or Scan to retrieve saved asset details.");
 
   async function refreshSavedAssets() {
     try {
@@ -1088,6 +1088,19 @@ export default function DashboardPage() {
   }, [savedAssets]);
 
   const searchAssets = useMemo(() => allAssets.filter((asset) => assetMatchesQuery(asset, query)).slice(0, 7), [allAssets, query]);
+
+  const qrCommandStats = useMemo(() => {
+    const qrLinked = allAssets.filter((asset) => asset.qrCode || asset.id).length;
+    const savedLocal = savedAssets.length;
+    const retrievable = allAssets.filter((asset) => asset.ipAddress || asset.serial || asset.rack || asset.switchPort).length;
+    const needsQr = allAssets.filter((asset) => !asset.qrCode).length;
+
+    return [
+      { label: "QR-linked records", value: qrLinked.toLocaleString(), detail: `${savedLocal} saved in local DB` },
+      { label: "Fast lookup fields", value: retrievable.toLocaleString(), detail: "ID, QR, IP, serial, rack, port" },
+      { label: "Needs QR label", value: needsQr.toLocaleString(), detail: "Missing printable QR identity" }
+    ];
+  }, [allAssets, savedAssets.length]);
 
   function openAssetFromSearch(asset: AssetRecord) {
     setSelectedAsset(asset);
@@ -1133,7 +1146,7 @@ export default function DashboardPage() {
       case "scan":
         setScanMessage("Point the camera at a PatchPilot QR label.");
         setIsScannerOpen(true);
-        setActionNotice("Scanner opened for QR asset lookup.");
+        setActionNotice("Scanner opened. Scan a QR label to retrieve the asset details.");
         break;
       case "rack-audit":
         setActiveNav("Racks");
@@ -1143,8 +1156,8 @@ export default function DashboardPage() {
       case "print-labels":
         setActiveNav("QR Studio");
         setSelectedAsset(null);
-        setQuery("label");
-        setActionNotice("QR Studio opened for label preview, download, and print.");
+        setQuery("");
+        setActionNotice("New QR asset opened. Enter details, save to DB, then print the label.");
         break;
       case "work-order":
         setActiveNav("Work Queue");
@@ -1161,8 +1174,8 @@ export default function DashboardPage() {
       case "import-assets":
         setActiveNav("QR Studio");
         setSelectedAsset(null);
-        setQuery("import");
-        setActionNotice("QR Studio opened for asset entry and CSV/Excel staging.");
+        setQuery("");
+        setActionNotice("QR registry opened. Search saved labels or paste a QR payload.");
         break;
     }
   }
@@ -1229,13 +1242,13 @@ export default function DashboardPage() {
                 setIsSearchOpen(true);
               }}
               onFocus={() => setIsSearchOpen(true)}
-              placeholder="Search assets, racks, cables, QR codes, work orders..."
+              placeholder="Scan or search QR ID, asset name, IP, serial, rack, port..."
             />
             <kbd>CMD K</kbd>
             {isSearchOpen && query.trim() && (
               <div className="global-search-menu">
                 <div className="global-search-title">
-                  <strong>Assets</strong>
+                  <strong>QR Registry</strong>
                   <span>{searchAssets.length ? `${searchAssets.length} found` : "No asset match"}</span>
                 </div>
                 {searchAssets.map((asset) => (
@@ -1292,6 +1305,33 @@ export default function DashboardPage() {
         ) : (
           <>
             <section className="dashboard-grid command-dashboard-grid">
+              <section className="qr-command-card">
+                <div className="qr-command-copy">
+                  <p>Assets</p>
+                  <h1>New or Scan</h1>
+                  <span>Create a new QR asset, enter the details, save it to the DB and print. Or scan an existing label and open the saved record immediately.</span>
+                </div>
+                <div className="qr-command-actions">
+                  <button onClick={() => handleQuickAction(quickActions[1])} type="button">
+                    <strong>New</strong>
+                    <span>Create QR, fill details, print label</span>
+                  </button>
+                  <button onClick={() => handleQuickAction(quickActions[0])} type="button">
+                    <strong>Scan</strong>
+                    <span>Scan QR and retrieve details</span>
+                  </button>
+                </div>
+                <div className="qr-command-stats">
+                  {qrCommandStats.map((stat) => (
+                    <article key={stat.label}>
+                      <span>{stat.label}</span>
+                      <strong>{stat.value}</strong>
+                      <small>{stat.detail}</small>
+                    </article>
+                  ))}
+                </div>
+              </section>
+
               <section className="metric-strip command-metrics">
                 {metrics.map((metric) => (
                   <article className="top-metric" key={metric.label}>
@@ -2548,14 +2588,14 @@ function QRStudio({
       <div className="qr-studio-head">
         <div>
           <p>QR Studio</p>
-          <h1>Create Asset + QR</h1>
+          <h1>Create QR + Save to DB</h1>
           <span>{message}</span>
         </div>
         <div className="qr-head-actions">
-          <button onClick={startNewAsset} type="button">New Asset</button>
-          <button onClick={onOpenScanner} type="button">Scan QR</button>
-          <button onClick={() => void saveAsset()} type="button">Save Asset</button>
-          <button onClick={printLabel} type="button">Print Label</button>
+          <button onClick={startNewAsset} type="button">New</button>
+          <button onClick={onOpenScanner} type="button">Scan</button>
+          <button onClick={() => void saveAsset()} type="button">Save to DB</button>
+          <button onClick={printLabel} type="button">Print</button>
         </div>
       </div>
 
@@ -2563,28 +2603,28 @@ function QRStudio({
         <article>
           <span>1</span>
           <div>
-            <strong>Create asset</strong>
-            <small>New asset starts with a generated QR ID.</small>
+            <strong>Generate QR</strong>
+            <small>Every record starts with a unique QR identity.</small>
           </div>
         </article>
         <article>
           <span>2</span>
           <div>
-            <strong>Fill details</strong>
-            <small>Name, serial, rack, network, owner and notes.</small>
+            <strong>Save to DB</strong>
+            <small>Store name, serial, rack, network and owner fields.</small>
           </div>
         </article>
         <article>
           <span>3</span>
           <div>
-            <strong>Save registry</strong>
-            <small>QR becomes searchable by ID, asset fields and location.</small>
+            <strong>Scan + retrieve</strong>
+            <small>Scan the label to open the saved asset payload.</small>
           </div>
         </article>
         <article>
           <span>{qrStats.qrLinked}</span>
           <div>
-            <strong>QR-linked assets</strong>
+            <strong>Retrievable records</strong>
             <small>{qrStats.saved} indexed / {qrStats.missingLocation} need location.</small>
           </div>
         </article>
@@ -2594,8 +2634,8 @@ function QRStudio({
         <section className="ops-card qr-editor-card">
           <header>
             <div>
-              <h2>Asset Details</h2>
-              <span>{asset.id} is the QR identity that will be saved with this asset.</span>
+              <h2>QR Payload Editor</h2>
+              <span>{asset.id} is the lookup key saved in the browser database.</span>
             </div>
             <button onClick={createQr} type="button">Regenerate QR</button>
           </header>
@@ -2659,7 +2699,7 @@ function QRStudio({
         <aside className="qr-side">
           <section className="ops-card qr-preview-card">
             <header>
-              <h2>Live QR Preview</h2>
+              <h2>QR Label Output</h2>
               <button onClick={downloadQr} type="button">Download QR</button>
             </header>
 
@@ -2687,7 +2727,7 @@ function QRStudio({
           <section className="ops-card asset-search-card">
             <header>
               <div>
-                <h2>Find Saved Assets</h2>
+                <h2>Scan or Retrieve from DB</h2>
                 <span>Search by QR, serial, hostname, rack, IP, MAC, owner or tag.</span>
               </div>
               <button onClick={() => setSearch("")} type="button">Clear</button>
@@ -2696,7 +2736,7 @@ function QRStudio({
               <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="QR ID, name, IP, rack, serial, MAC..." />
               <div className="scan-open-row">
                 <input value={scanValue} onChange={(event) => setScanValue(event.target.value)} placeholder="patchpilot://asset/PP-000128" />
-                <button onClick={() => void openFromScan()} type="button">Open</button>
+                <button onClick={() => void openFromScan()} type="button">Retrieve</button>
               </div>
             </div>
             <div className="asset-result-list">

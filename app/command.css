@@ -1,6 +1,7 @@
 .command-dashboard-grid {
   grid-template-columns: 300px minmax(0, 1fr) 270px 270px;
   grid-template-areas:
+    "qrhero qrhero qrhero qrhero"
     "metrics metrics metrics metrics"
     "alerts work work work"
     "quick quick quick quick"
@@ -8,6 +9,138 @@
     "rack rack rack rack"
     "tech scans offline health";
   gap: 10px;
+}
+
+.qr-command-card {
+  grid-area: qrhero;
+  display: grid;
+  grid-template-columns: minmax(0, 0.78fr) minmax(360px, 1.22fr);
+  gap: 12px;
+  align-items: stretch;
+  border: 1px solid rgba(125, 211, 252, 0.26);
+  border-radius: 12px;
+  padding: 12px;
+  background:
+    linear-gradient(145deg, rgba(34, 211, 238, 0.12), rgba(96, 165, 250, 0.055) 40%, rgba(255, 255, 255, 0.035)),
+    var(--panel);
+  box-shadow: var(--shadow);
+}
+
+.qr-command-copy {
+  min-width: 0;
+}
+
+.qr-command-copy p,
+.qr-command-copy h1,
+.qr-command-copy span {
+  margin: 0;
+}
+
+.qr-command-copy p {
+  color: var(--cyan);
+  font-size: 0.68rem;
+  font-weight: 950;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.qr-command-copy h1 {
+  margin-top: 5px;
+  font-size: 1.28rem;
+  line-height: 1.05;
+}
+
+.qr-command-copy span {
+  display: block;
+  max-width: 520px;
+  margin-top: 8px;
+  color: #b8c9dc;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+.qr-command-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  align-content: stretch;
+}
+
+.qr-command-actions button {
+  display: grid;
+  min-height: 92px;
+  border: 1px solid rgba(125, 211, 252, 0.32);
+  border-radius: 10px;
+  padding: 13px;
+  background: rgba(7, 17, 29, 0.68);
+  color: var(--text);
+  text-align: center;
+  place-items: center;
+}
+
+.qr-command-actions button:first-child,
+.qr-command-actions button:nth-child(2) {
+  background: linear-gradient(135deg, var(--blue), var(--cyan));
+  color: #05111d;
+}
+
+.qr-command-actions strong,
+.qr-command-actions span {
+  display: block;
+  min-width: 0;
+}
+
+.qr-command-actions strong {
+  font-size: 1.32rem;
+  line-height: 1;
+}
+
+.qr-command-actions span {
+  align-self: end;
+  color: inherit;
+  font-size: 0.72rem;
+  opacity: 0.82;
+}
+
+.qr-command-stats {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.qr-command-stats article {
+  min-width: 0;
+  border: 1px solid rgba(148, 163, 184, 0.14);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.qr-command-stats span,
+.qr-command-stats strong,
+.qr-command-stats small {
+  display: block;
+}
+
+.qr-command-stats span {
+  color: var(--muted);
+  font-size: 0.7rem;
+  font-weight: 850;
+}
+
+.qr-command-stats strong {
+  margin-top: 5px;
+  font-size: 1.16rem;
+}
+
+.qr-command-stats small {
+  margin-top: 3px;
+  overflow: hidden;
+  color: #9fb4cc;
+  font-size: 0.68rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .command-metrics {
@@ -91,6 +224,7 @@
   .command-dashboard-grid {
     grid-template-columns: 270px minmax(0, 1fr) 250px;
     grid-template-areas:
+      "qrhero qrhero qrhero"
       "metrics metrics metrics"
       "alerts work work"
       "quick quick quick"
@@ -103,12 +237,17 @@
   .command-dashboard-grid .quick-actions {
     grid-template-columns: repeat(6, minmax(0, 1fr));
   }
+
+  .qr-command-card {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 900px) {
   .command-dashboard-grid {
     grid-template-columns: 1fr;
     grid-template-areas:
+      "qrhero"
       "metrics"
       "alerts"
       "work"
@@ -125,6 +264,11 @@
   .command-dashboard-grid .activity-list,
   .command-dashboard-grid .rack-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .qr-command-actions,
+  .qr-command-stats {
+    grid-template-columns: 1fr;
   }
 }
 
