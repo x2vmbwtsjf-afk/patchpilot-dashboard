@@ -1180,6 +1180,8 @@ export default function DashboardPage() {
     }
   }
 
+  const isQrCreationView = activeNav === "QR Studio" && selectedAsset === null;
+
   return (
     <main className="ops-shell">
       <aside className="ops-sidebar">
@@ -1231,7 +1233,7 @@ export default function DashboardPage() {
       </aside>
 
       <section className="ops-main">
-        {activeNav !== "QR Studio" && (
+        {!isQrCreationView && (
           <>
             <header className="topbar">
               <div className="search-box global-search">
