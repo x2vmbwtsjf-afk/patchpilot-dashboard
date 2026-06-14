@@ -326,6 +326,10 @@
   font-size: 0.72rem;
 }
 
+.qr-print-label {
+  display: none;
+}
+
 .qr-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.15fr) 430px;
@@ -592,6 +596,7 @@
   .qr-schema-card,
   .qr-preview-card > header,
   .qr-code-box,
+  .qr-create-controls,
   .qr-action-grid {
     display: none !important;
   }
@@ -599,7 +604,9 @@
   .ops-shell,
   .ops-main,
   .qr-layout,
-  .qr-side {
+  .qr-side,
+  .qr-create-stage,
+  .qr-create-body {
     display: block !important;
     padding: 0 !important;
   }
@@ -611,6 +618,10 @@
   }
 
   .print-label {
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) 1.05in;
+    gap: 0.12in;
+    align-items: start;
     width: 3.9in;
     min-height: 1.25in;
     margin: 0 !important;
@@ -631,7 +642,14 @@
     color: #111111 !important;
   }
 
+  .print-label small,
+  .print-label em {
+    grid-column: 1 / -1;
+  }
+
   .print-label img {
+    width: 1.05in !important;
+    height: 1.05in !important;
     border: 1px solid #000000;
   }
 }

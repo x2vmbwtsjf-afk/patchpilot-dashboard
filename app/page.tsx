@@ -2461,6 +2461,7 @@ function QRStudio({
 
   const qrPayload = useMemo(() => getQrPayload(asset), [asset]);
   const selectedAssetKind = asset.assetType === "Rack" ? "Rack" : asset.assetType.includes("Cable") ? "Cable" : "Server";
+  const printTitle = asset.name.trim() || `${selectedAssetKind} ${asset.id}`;
   const indexedAssets = useMemo(() => {
     const byId = new Map<string, AssetRecord>();
     registryAssets.forEach((item) => byId.set(item.id, item));
@@ -2625,6 +2626,16 @@ function QRStudio({
         <div className="qr-create-body">
           <div className="qr-code-box qr-code-primary">
             {qrImage ? <img alt="Asset QR code" src={qrImage} /> : <span>Generating QR</span>}
+          </div>
+
+          <div className="print-label qr-print-label">
+            <div>
+              <strong>{printTitle}</strong>
+              <span>{selectedAssetKind} / {asset.id}</span>
+            </div>
+            {qrImage && <img alt="Printable asset QR code" src={qrImage} />}
+            <small>{asset.site || "Site"} {asset.room && `/ ${asset.room}`} {asset.rack && `/ ${asset.rack}`} {asset.ruPosition && `/ RU ${asset.ruPosition}`}</small>
+            <em>{qrPayload}</em>
           </div>
 
           <div className="qr-create-controls">
