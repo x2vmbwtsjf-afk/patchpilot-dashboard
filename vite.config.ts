@@ -3,7 +3,7 @@ import react from "@vitejs/plugin-react";
 
 export default defineConfig({
   plugins: [react()],
-  base: "/patchpilot-dashboard/",
+  base: process.env.VERCEL ? "/" : "/patchpilot-dashboard/",
   build: {
     outDir: "dist"
   },

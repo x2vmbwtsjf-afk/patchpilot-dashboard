@@ -14,7 +14,7 @@
 .qr-command-card {
   grid-area: qrhero;
   display: grid;
-  grid-template-columns: minmax(0, 0.78fr) minmax(360px, 1.22fr);
+  grid-template-columns: minmax(300px, 0.9fr) minmax(440px, 1.1fr);
   gap: 12px;
   align-items: stretch;
   border: 1px solid rgba(125, 211, 252, 0.26);
@@ -59,6 +59,51 @@
   line-height: 1.45;
 }
 
+.command-focus-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.command-focus-list article {
+  min-width: 0;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 10px;
+  padding: 10px 11px;
+  background: rgba(7, 17, 29, 0.58);
+}
+
+.command-focus-list span,
+.command-focus-list strong,
+.command-focus-list small {
+  display: block;
+}
+
+.command-focus-list span {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.command-focus-list strong {
+  margin-top: 5px;
+  overflow: hidden;
+  color: #edf7ff;
+  font-size: 0.9rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.command-focus-list small {
+  margin-top: 3px;
+  color: #9fb4cc;
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
 .qr-command-actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -68,20 +113,26 @@
 
 .qr-command-actions button {
   display: grid;
-  min-height: 92px;
-  border: 1px solid rgba(125, 211, 252, 0.32);
+  align-content: center;
+  align-items: center;
+  justify-items: start;
+  min-height: 56px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
   border-radius: 10px;
-  padding: 13px;
+  padding: 10px 12px;
   background: rgba(7, 17, 29, 0.68);
   color: var(--text);
-  text-align: center;
-  place-items: center;
+  text-align: left;
 }
 
-.qr-command-actions button:first-child,
-.qr-command-actions button:nth-child(2) {
-  background: linear-gradient(135deg, var(--blue), var(--cyan));
-  color: #05111d;
+.qr-command-actions button:hover {
+  border-color: rgba(34, 211, 238, 0.42);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.qr-command-actions button:first-child {
+  border-color: rgba(34, 211, 238, 0.42);
+  background: linear-gradient(135deg, rgba(96, 165, 250, 0.22), rgba(34, 211, 238, 0.18));
 }
 
 .qr-command-actions strong,
@@ -91,15 +142,14 @@
 }
 
 .qr-command-actions strong {
-  font-size: 1.32rem;
+  font-size: 0.94rem;
   line-height: 1;
 }
 
 .qr-command-actions span {
-  align-self: end;
   color: inherit;
-  font-size: 0.72rem;
-  opacity: 0.82;
+  font-size: 0.7rem;
+  opacity: 0.7;
 }
 
 .qr-command-stats {
@@ -239,7 +289,7 @@
   }
 
   .qr-command-card {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(300px, 0.9fr) minmax(360px, 1.1fr);
   }
 }
 
@@ -258,6 +308,12 @@
       "scans"
       "offline"
       "health";
+  }
+
+  .qr-command-actions,
+  .qr-command-stats,
+  .command-focus-list {
+    grid-template-columns: 1fr;
   }
 
   .command-dashboard-grid .quick-actions,

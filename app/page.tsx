@@ -284,7 +284,7 @@ const offlineDevices: OfflineDevice[] = [
 
 const quickActions: QuickAction[] = [
   { id: "scan", title: "Scan QR Code", detail: "Identify an asset", icon: "QR", tone: "purple" },
-  { id: "print-labels", title: "Create + Save QR", detail: "Asset to DB", icon: "DB", tone: "slate" },
+  { id: "print-labels", title: "Create Label", detail: "Register asset", icon: "DB", tone: "slate" },
   { id: "import-assets", title: "Lookup Registry", detail: "Find by QR data", icon: "LU", tone: "blue" },
   { id: "rack-audit", title: "Start Rack Audit", detail: "Verify by QR", icon: "RA", tone: "amber" },
   { id: "work-order", title: "Create Work Order", detail: "New work order", icon: "WO", tone: "green" },
@@ -1055,7 +1055,7 @@ export default function DashboardPage() {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [scanMessage, setScanMessage] = useState("Point the camera at a PatchPilot QR label.");
-  const [actionNotice, setActionNotice] = useState("Choose New to create a QR asset, or Scan to retrieve saved asset details.");
+  const [actionNotice, setActionNotice] = useState("Command is ready: scan assets, create labels, review rack audits, or focus the high-priority queue.");
 
   async function refreshSavedAssets() {
     try {
@@ -1173,7 +1173,7 @@ export default function DashboardPage() {
         setActiveNav("QR Studio");
         setSelectedAsset(null);
         setQuery("");
-        setActionNotice("New QR asset opened. Enter details, save to DB, then print the label.");
+        setActionNotice("Label workspace opened. Register the asset, save it to the local DB, then print the QR label.");
         break;
       case "work-order":
         setActiveNav("Work Queue");
@@ -1330,18 +1330,38 @@ export default function DashboardPage() {
             <section className="dashboard-grid command-dashboard-grid">
               <section className="qr-command-card">
                 <div className="qr-command-copy">
-                  <p>Assets</p>
-                  <h1>New or Scan</h1>
-                  <span>Create a new QR asset, enter the details, save it to the DB and print. Or scan an existing label and open the saved record immediately.</span>
+                  <p>Operations Command</p>
+                  <h1>Today&apos;s field plan</h1>
+                  <span>Keep rack audits, QR labeling, fiber validation, and offline sync work moving from one command surface.</span>
+                  <div className="command-focus-list">
+                    <article>
+                      <span>Next move</span>
+                      <strong>Validate DC-A12 labels</strong>
+                      <small>Rack audit and QR checks are due today.</small>
+                    </article>
+                    <article>
+                      <span>Watch</span>
+                      <strong>5 active exceptions</strong>
+                      <small>Orphan cables, duplicate QR codes, and sync conflicts.</small>
+                    </article>
+                  </div>
                 </div>
-                <div className="qr-command-actions">
-                  <button onClick={() => handleQuickAction(quickActions[1])} type="button">
-                    <strong>New</strong>
-                    <span>Create QR, fill details, print label</span>
-                  </button>
+                <div className="qr-command-actions" aria-label="Primary field actions">
                   <button onClick={() => handleQuickAction(quickActions[0])} type="button">
-                    <strong>Scan</strong>
-                    <span>Scan QR and retrieve details</span>
+                    <strong>Scan Asset</strong>
+                    <span>Open QR scanner</span>
+                  </button>
+                  <button onClick={() => handleQuickAction(quickActions[1])} type="button">
+                    <strong>Create Label</strong>
+                    <span>New QR asset</span>
+                  </button>
+                  <button onClick={() => handleQuickAction(quickActions[3])} type="button">
+                    <strong>Rack Audit</strong>
+                    <span>Review rack workspace</span>
+                  </button>
+                  <button onClick={() => handleQuickAction(quickActions[4])} type="button">
+                    <strong>Work Queue</strong>
+                    <span>High priority jobs</span>
                   </button>
                 </div>
                 <div className="qr-command-stats">
