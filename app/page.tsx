@@ -110,6 +110,8 @@ type AssetRecord = {
   updatedAt: string;
 };
 
+type AssetCategory = "Cables" | "GBICs" | "Servers" | "Other";
+
 type AssetDatabaseApi = {
   getAll: () => Promise<AssetRecord[]>;
   put: (asset: AssetRecord) => Promise<void>;
@@ -293,6 +295,7 @@ const quickActions: QuickAction[] = [
 
 const assetTypes = ["Device", "Rack", "Fiber Cable", "Copper Cable", "Patch Panel", "UPS", "PDU", "Switch", "Server", "Storage", "Other"];
 const assetStatuses: AssetStatus[] = ["Active", "In Service", "In Stock", "Maintenance", "Offline", "Retired"];
+const assetCategories: AssetCategory[] = ["Cables", "GBICs", "Servers", "Other"];
 
 const rackInventory: RackRecord[] = [
   {
@@ -941,6 +944,110 @@ const demoAssetInventory: AssetRecord[] = [
     owner: "Storage",
     createdAt: "2026-05-01T08:15:00.000Z",
     updatedAt: "2026-05-28T02:10:00.000Z"
+  },
+  {
+    id: "PP-000501",
+    qrCode: "PP-000501",
+    assetType: "Fiber Cable",
+    name: "CBL-A12-B07-LC-01",
+    serial: "CBL-8812",
+    status: "In Service",
+    site: "DC1",
+    room: "Room 3",
+    rack: "RACK-A12",
+    ruPosition: "Tray A",
+    ipAddress: "",
+    macAddress: "",
+    vlan: "4094",
+    switchPort: "SW-LEAF-02 Et1",
+    cableType: "OS2 Fiber",
+    length: "10m",
+    connectorType: "LC-LC",
+    from: "PP-A12-PATCH-01 LC-01",
+    to: "SW-SPINE-01 Et12",
+    notes: "Primary leaf-to-spine fiber run. Light validation passed during last audit.",
+    tags: "cable,fiber,leaf-spine",
+    owner: "Network",
+    createdAt: "2026-05-01T08:15:00.000Z",
+    updatedAt: "2026-05-28T03:38:00.000Z"
+  },
+  {
+    id: "PP-000502",
+    qrCode: "PP-000502",
+    assetType: "Copper Cable",
+    name: "CBL-MGMT-C03-UPS",
+    serial: "CBL-9402",
+    status: "Maintenance",
+    site: "DC1",
+    room: "Room 4",
+    rack: "RACK-C03",
+    ruPosition: "MGMT tray",
+    ipAddress: "",
+    macAddress: "",
+    vlan: "900",
+    switchPort: "MGMT",
+    cableType: "Cat6A",
+    length: "3ft",
+    connectorType: "RJ45",
+    from: "MGMT switch",
+    to: "UPS-C03-A",
+    notes: "Cable is tagged for replacement while UPS-C03-A is offline.",
+    tags: "cable,copper,maintenance",
+    owner: "Facilities",
+    createdAt: "2026-05-01T08:15:00.000Z",
+    updatedAt: "2026-05-28T02:30:00.000Z"
+  },
+  {
+    id: "PP-000601",
+    qrCode: "PP-000601",
+    assetType: "GBIC",
+    name: "SFP-10G-LR-A12-01",
+    serial: "FIN-LR-10G-A1201",
+    status: "In Stock",
+    site: "DC1",
+    room: "Optics Locker",
+    rack: "BIN-OPT-A1",
+    ruPosition: "",
+    ipAddress: "",
+    macAddress: "",
+    vlan: "",
+    switchPort: "",
+    cableType: "Single-mode optic",
+    length: "10km",
+    connectorType: "LC",
+    from: "Optics Locker",
+    to: "Unassigned",
+    notes: "10G LR SFP+ spare, ready for leaf or firewall uplink replacement.",
+    tags: "gbic,optic,sfp,spare",
+    owner: "Network",
+    createdAt: "2026-05-01T08:15:00.000Z",
+    updatedAt: "2026-05-28T03:20:00.000Z"
+  },
+  {
+    id: "PP-000602",
+    qrCode: "PP-000602",
+    assetType: "GBIC",
+    name: "QSFP-100G-SR4-C03-02",
+    serial: "ARI-SR4-C0302",
+    status: "In Service",
+    site: "DC1",
+    room: "Room 4",
+    rack: "RACK-C03",
+    ruPosition: "U28",
+    ipAddress: "",
+    macAddress: "",
+    vlan: "700",
+    switchPort: "GPU-TRAIN-01 IB1",
+    cableType: "Multimode optic",
+    length: "100m",
+    connectorType: "MPO",
+    from: "GPU-TRAIN-01",
+    to: "IB-FABRIC-02",
+    notes: "100G SR4 optic assigned to GPU fabric validation path.",
+    tags: "gbic,optic,qsfp,gpu",
+    owner: "AI Platform",
+    createdAt: "2026-05-01T08:15:00.000Z",
+    updatedAt: "2026-05-28T02:56:00.000Z"
   }
 ];
 
@@ -995,6 +1102,16 @@ function assetMatchesQuery(asset: AssetRecord, query: string) {
     .join(" ")
     .toLowerCase()
     .includes(needle);
+}
+
+function getAssetCategory(asset: AssetRecord): AssetCategory {
+  const type = asset.assetType.toLowerCase();
+  const tags = asset.tags.toLowerCase();
+
+  if (type.includes("cable")) return "Cables";
+  if (type.includes("gbic") || type.includes("transceiver") || tags.includes("gbic") || tags.includes("optic")) return "GBICs";
+  if (type.includes("server")) return "Servers";
+  return "Other";
 }
 
 function openAssetDatabase(): Promise<IDBDatabase> {
@@ -1850,11 +1967,10 @@ function AssetsInventoryPage({
 
   const [selectedAssetId, setSelectedAssetId] = useState(assetRows[0]?.id ?? demoAssetInventory[0].id);
   const [assetQuery, setAssetQuery] = useState("");
-  const [typeFilter, setTypeFilter] = useState("All Types");
+  const [categoryFilter, setCategoryFilter] = useState("All Categories");
   const [siteFilter, setSiteFilter] = useState("All Sites");
   const [statusFilter, setStatusFilter] = useState("All Status");
 
-  const assetTypesList = useMemo(() => Array.from(new Set(assetRows.map((asset) => asset.assetType))).sort(), [assetRows]);
   const sites = useMemo(() => Array.from(new Set(assetRows.map((asset) => asset.site).filter(Boolean))).sort(), [assetRows]);
 
   const filteredAssets = useMemo(() => {
@@ -1883,15 +1999,27 @@ function AssetsInventoryPage({
         .join(" ")
         .toLowerCase();
       const matchesQuery = !needle || searchable.includes(needle);
-      const matchesType = typeFilter === "All Types" || asset.assetType === typeFilter;
+      const assetCategory = getAssetCategory(asset);
+      const matchesCategory = categoryFilter === "All Categories" || assetCategory === categoryFilter;
       const matchesSite = siteFilter === "All Sites" || asset.site === siteFilter;
       const matchesStatus = statusFilter === "All Status" || asset.status === statusFilter;
 
-      return matchesQuery && matchesType && matchesSite && matchesStatus;
+      return matchesQuery && matchesCategory && matchesSite && matchesStatus;
     });
-  }, [assetQuery, assetRows, siteFilter, statusFilter, typeFilter]);
+  }, [assetQuery, assetRows, categoryFilter, siteFilter, statusFilter]);
 
   const selectedAsset = filteredAssets.find((asset) => asset.id === selectedAssetId) ?? filteredAssets[0] ?? assetRows[0] ?? demoAssetInventory[0];
+
+  const categoryGroups = useMemo(() => {
+    const visibleCategories = categoryFilter === "All Categories"
+      ? assetCategories
+      : assetCategories.filter((category) => category === categoryFilter);
+
+    return visibleCategories.map((category) => ({
+      category,
+      assets: filteredAssets.filter((asset) => getAssetCategory(asset) === category)
+    }));
+  }, [categoryFilter, filteredAssets]);
 
   const assetStats = useMemo(() => {
     const active = filteredAssets.filter((asset) => asset.status === "Active" || asset.status === "In Service").length;
@@ -1950,10 +2078,10 @@ function AssetsInventoryPage({
 
       <section className="rack-toolbar assets-toolbar ops-card">
         <input value={assetQuery} onChange={(event) => setAssetQuery(event.target.value)} placeholder="Search QR, serial, hostname, rack, IP, MAC..." />
-        <select value={typeFilter} onChange={(event) => setTypeFilter(event.target.value)}>
-          <option>All Types</option>
-          {assetTypesList.map((type) => (
-            <option key={type}>{type}</option>
+        <select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)}>
+          <option>All Categories</option>
+          {assetCategories.map((category) => (
+            <option key={category}>{category}</option>
           ))}
         </select>
         <select value={siteFilter} onChange={(event) => setSiteFilter(event.target.value)}>
@@ -1980,35 +2108,40 @@ function AssetsInventoryPage({
             <button type="button">{filteredAssets.length} records</button>
           </header>
           <div className="assets-table">
-            <div className="assets-head">
-              <span>Asset</span>
-              <span>Type</span>
-              <span>Location</span>
-              <span>Network</span>
-              <span>Owner</span>
-              <span>Status</span>
-            </div>
-            {filteredAssets.map((asset) => (
-              <button className={selectedAsset.id === asset.id ? "active" : ""} key={asset.id} onClick={() => setSelectedAssetId(asset.id)} type="button">
-                <span>
-                  <b>{asset.name || asset.id}</b>
-                  <small>{asset.id} / {asset.serial || "No serial"}</small>
-                </span>
-                <span>
-                  <b>{asset.assetType}</b>
-                  <small>{asset.connectorType || asset.cableType || "No connector"}</small>
-                </span>
-                <span>
-                  <b>{asset.rack || "No rack"}</b>
-                  <small>{asset.site} / {asset.room || "No room"} / {asset.ruPosition || "No RU"}</small>
-                </span>
-                <span>
-                  <b>{asset.ipAddress || "No IP"}</b>
-                  <small>{asset.macAddress || asset.switchPort || "No network mapping"}</small>
-                </span>
-                <span>{asset.owner || "Unassigned"}</span>
-                <AssetStatusBadge status={asset.status} />
-              </button>
+            {categoryGroups.map((group) => (
+              <section className="asset-category-section" key={group.category}>
+                <header>
+                  <div>
+                    <h3>{group.category}</h3>
+                    <span>{group.assets.length} records</span>
+                  </div>
+                  <small>{group.category === "GBICs" ? "Optics / transceivers" : group.category === "Cables" ? "Fiber, copper, DAC" : group.category === "Servers" ? "Compute nodes" : "Switches, racks, panels, storage, power"}</small>
+                </header>
+
+                {group.assets.length ? (
+                  <div className="asset-category-list">
+                    {group.assets.map((asset) => (
+                      <button className={selectedAsset.id === asset.id ? "active" : ""} key={asset.id} onClick={() => setSelectedAssetId(asset.id)} type="button">
+                        <span>
+                          <b>{asset.name || asset.id}</b>
+                          <small>{asset.id} / {asset.assetType}</small>
+                        </span>
+                        <span>
+                          <b>{asset.rack || asset.site || "No location"}</b>
+                          <small>{asset.room || asset.ruPosition || asset.owner || "No room"}</small>
+                        </span>
+                        <span>
+                          <b>{asset.connectorType || asset.cableType || asset.ipAddress || "No connector"}</b>
+                          <small>{asset.serial || asset.switchPort || asset.macAddress || "No serial"}</small>
+                        </span>
+                        <AssetStatusBadge status={asset.status} />
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="asset-category-empty">No matching records in this category.</div>
+                )}
+              </section>
             ))}
           </div>
         </section>
