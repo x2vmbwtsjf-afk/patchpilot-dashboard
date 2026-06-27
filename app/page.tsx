@@ -1272,6 +1272,7 @@ export default function DashboardPage() {
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [scanMessage, setScanMessage] = useState("Point the camera at a PatchPilot QR label.");
   const [actionNotice, setActionNotice] = useState("Command is ready: scan assets, create labels, review rack audits, or focus the high-priority queue.");
+  const commandImportInputRef = useRef<HTMLInputElement | null>(null);
 
   async function refreshSavedAssets() {
     try {
@@ -1325,6 +1326,51 @@ export default function DashboardPage() {
     setActiveNav("QR Studio");
     setQuery(asset.id);
     setIsSearchOpen(false);
+  }
+
+  async function importAssetsFromFile(file: File) {
+    setActionNotice(`Importing ${file.name}...`);
+
+    try {
+      const XLSX = await import("xlsx");
+      const buffer = await file.arrayBuffer();
+      const workbook = XLSX.read(buffer, { type: "array", cellDates: true });
+      const firstSheetName = workbook.SheetNames[0];
+
+      if (!firstSheetName) {
+        setActionNotice("No worksheet found in this file.");
+        return;
+      }
+
+      const sheet = workbook.Sheets[firstSheetName];
+      const rows = XLSX.utils.sheet_to_json<ImportedAssetRow>(sheet, { defval: "", raw: false });
+      const importedAssets = rows
+        .map((row, index) => createAssetFromImportedRow(row, index))
+        .filter((asset): asset is AssetRecord => Boolean(asset));
+
+      if (!importedAssets.length) {
+        setActionNotice("No importable asset rows found. Check the header row.");
+        return;
+      }
+
+      const database = await getAssetDatabase();
+      await Promise.all(importedAssets.map((asset) => database.put(asset)));
+      await refreshSavedAssets();
+      setSelectedAsset(importedAssets[0]);
+      setActiveNav("Assets");
+      setQuery("");
+      setIsSearchOpen(false);
+      setActionNotice(`Imported ${importedAssets.length} assets. Open any row to print its QR.`);
+    } catch {
+      setActionNotice("Import failed. Use .xlsx, .xls, or .csv with a clear header row.");
+    }
+  }
+
+  function handleCommandImport(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    void importAssetsFromFile(file);
   }
 
   async function openAssetFromQrValue(value: string) {
@@ -1404,10 +1450,7 @@ export default function DashboardPage() {
         setActionNotice("Fiber validation context loaded in activity and work search.");
         break;
       case "import-assets":
-        setActiveNav("QR Studio");
-        setSelectedAsset(null);
-        setQuery("");
-        setActionNotice("QR registry opened. Search saved labels or paste a QR payload.");
+        commandImportInputRef.current?.click();
         break;
     }
   }
@@ -1417,6 +1460,13 @@ export default function DashboardPage() {
 
   return (
     <main className="ops-shell">
+      <input
+        ref={commandImportInputRef}
+        accept=".xlsx,.xls,.csv"
+        className="asset-import-input"
+        onChange={handleCommandImport}
+        type="file"
+      />
       <aside className="ops-sidebar">
         <div className="ops-brand">
           <div className="ops-logo">P</div>
@@ -1571,6 +1621,10 @@ export default function DashboardPage() {
                   <button onClick={() => handleQuickAction(quickActions[1])} type="button">
                     <strong>Create Label</strong>
                     <span>New QR asset</span>
+                  </button>
+                  <button onClick={() => handleQuickAction(quickActions[2])} type="button">
+                    <strong>Import Assets</strong>
+                    <span>Upload Excel / CSV</span>
                   </button>
                   <button onClick={() => handleQuickAction(quickActions[3])} type="button">
                     <strong>Rack Audit</strong>
