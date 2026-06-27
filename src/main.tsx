@@ -8,6 +8,7 @@ import "../app/cables.css";
 import "../app/assets.css";
 import "../app/mobile.css";
 import "../app/command.css";
+import "../app/system.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

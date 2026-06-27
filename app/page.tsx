@@ -55,6 +55,36 @@ type ServiceDeskProvider = {
   status: "Ready" | "Planned";
 };
 
+type SystemHealthStatus = "Enabled" | "Partial" | "Disabled";
+
+type SettingsControl = {
+  label: string;
+  detail: string;
+  value: string;
+  status: SystemHealthStatus;
+};
+
+type IntegrationProvider = {
+  name: string;
+  icon: string;
+  category: string;
+  detail: string;
+  status: "Not Connected" | "Ready to Connect" | "Planned";
+  fields: string[];
+  nextStep: string;
+};
+
+type AuditLogEntry = {
+  id: string;
+  actor: string;
+  action: string;
+  target: string;
+  time: string;
+  source: string;
+  severity: "Info" | "Warning" | "Critical";
+  detail: string;
+};
+
 type FiberSignalResult = {
   color: "red" | "white";
   score: number;
@@ -270,6 +300,64 @@ const serviceDeskProviders: ServiceDeskProvider[] = [
   { name: "ServiceNow", icon: "SN", detail: "Incident / task sync placeholder", status: "Ready" },
   { name: "Jira", icon: "JR", detail: "Issue / JSM request placeholder", status: "Ready" },
   { name: "Other", icon: "OT", detail: "Webhook or custom API placeholder", status: "Planned" }
+];
+
+const settingsControls: SettingsControl[] = [
+  { label: "Asset ID Prefix", detail: "Default QR/RFID identity format", value: "PP-000000", status: "Enabled" },
+  { label: "Label Print Size", detail: "Optimized for label printers", value: "50mm QR only", status: "Enabled" },
+  { label: "Unknown QR Flow", detail: "Ask before creating a new asset", value: "Confirm + Draft", status: "Enabled" },
+  { label: "Offline Database", detail: "Local IndexedDB registry for field work", value: "Browser local DB", status: "Enabled" },
+  { label: "Excel Import Mapping", detail: "English and Hebrew headers supported", value: "Auto map", status: "Enabled" },
+  { label: "Supabase Sync", detail: "Cloud database connection layer", value: "Ready to configure", status: "Partial" }
+];
+
+const integrationProviders: IntegrationProvider[] = [
+  {
+    name: "Supabase",
+    icon: "SB",
+    category: "Database",
+    detail: "Central asset registry, auth, audit storage, and realtime sync.",
+    status: "Ready to Connect",
+    fields: ["Project URL", "Anon key", "assets table", "audit_events table"],
+    nextStep: "Add env vars and map AssetRecord fields to Postgres."
+  },
+  {
+    name: "ServiceNow",
+    icon: "SN",
+    category: "Service Desk",
+    detail: "Create or link incidents, tasks, and CMDB records from QR scans.",
+    status: "Ready to Connect",
+    fields: ["Instance URL", "Client ID", "Client Secret", "Assignment group"],
+    nextStep: "Connect OAuth and define ticket templates."
+  },
+  {
+    name: "Jira",
+    icon: "JR",
+    category: "Service Desk",
+    detail: "Open Jira or JSM requests from assets, rack audits, and fiber tests.",
+    status: "Ready to Connect",
+    fields: ["Site URL", "Project key", "Issue type", "API token"],
+    nextStep: "Choose project defaults and field mapping."
+  },
+  {
+    name: "Other",
+    icon: "OT",
+    category: "Webhook",
+    detail: "Generic outbound webhook for custom NOC, ERP, or automation systems.",
+    status: "Planned",
+    fields: ["Webhook URL", "Shared secret", "Payload template"],
+    nextStep: "Define signed JSON payload and retry policy."
+  }
+];
+
+const auditLogEntries: AuditLogEntry[] = [
+  { id: "AUD-1042", actor: "David M.", action: "Saved asset", target: "PP-000132", time: "Just now", source: "QR Studio", severity: "Info", detail: "Unknown QR/RFID was added as a new asset draft and saved to local DB." },
+  { id: "AUD-1041", actor: "Sean P.", action: "Imported spreadsheet", target: "13 rows", time: "4 min ago", source: "Assets", severity: "Info", detail: "Excel import mapped serials, IPs, racks, cable fields, and generated QR identities." },
+  { id: "AUD-1040", actor: "Alex R.", action: "Fiber signal detected", target: "Fiber-221", time: "11 min ago", source: "Mobile Camera", severity: "Info", detail: "Camera validation detected a stable red/white optical signal." },
+  { id: "AUD-1039", actor: "System", action: "Duplicate QR warning", target: "PP-000128", time: "18 min ago", source: "Registry", severity: "Warning", detail: "Two records matched the same QR payload and need operator review." },
+  { id: "AUD-1038", actor: "Mike T.", action: "Printed QR label", target: "PP-000171", time: "27 min ago", source: "Label Printer", severity: "Info", detail: "QR-only 50mm label print was prepared from the asset record." },
+  { id: "AUD-1037", actor: "System", action: "Sync unavailable", target: "Supabase", time: "43 min ago", source: "Integration Layer", severity: "Warning", detail: "Cloud sync is not configured yet; local browser DB remains active." },
+  { id: "AUD-1036", actor: "David M.", action: "Opened rack audit", target: "RACK-A12", time: "1 hr ago", source: "Racks", severity: "Info", detail: "Rack workspace opened with topology, device details, and cable trace." }
 ];
 
 const recentScans: Scan[] = [
@@ -1527,7 +1615,7 @@ export default function DashboardPage() {
         <div className="system-menu">
           <p>System</p>
           {systemItems.map((item) => (
-            <button key={item} type="button">
+            <button className={activeNav === item ? "active" : ""} key={item} onClick={() => setActiveNav(item)} type="button">
               <span className="nav-icon">{item.slice(0, 2).toUpperCase()}</span>
               {item}
             </button>
@@ -1630,6 +1718,12 @@ export default function DashboardPage() {
           <CablesInventoryPage />
         ) : activeNav === "QR Studio" ? (
           <QRStudio initialAsset={selectedAsset} registryAssets={allAssets} onAssetsChanged={refreshSavedAssets} onOpenScanner={() => setIsScannerOpen(true)} />
+        ) : activeNav === "Settings" ? (
+          <SettingsPage />
+        ) : activeNav === "Integrations" ? (
+          <IntegrationsPage />
+        ) : activeNav === "Audit Logs" ? (
+          <AuditLogsPage />
         ) : (
           <>
             <section className="dashboard-grid command-dashboard-grid">
@@ -1789,6 +1883,267 @@ export default function DashboardPage() {
       </section>
     </main>
   );
+}
+
+function SettingsPage() {
+  const enabledCount = settingsControls.filter((item) => item.status === "Enabled").length;
+  const partialCount = settingsControls.filter((item) => item.status === "Partial").length;
+
+  return (
+    <section className="system-page settings-page">
+      <header className="system-hero">
+        <div>
+          <p>System Control</p>
+          <h1>Settings</h1>
+          <span>Operational defaults for labels, scanning, imports, offline work, and future cloud sync.</span>
+        </div>
+        <div className="system-hero-actions">
+          <button type="button">Save Draft</button>
+          <button type="button">Export Config</button>
+        </div>
+      </header>
+
+      <section className="system-kpis">
+        <article>
+          <span>Enabled Controls</span>
+          <strong>{enabledCount}</strong>
+          <small>Production-ready browser settings</small>
+        </article>
+        <article className={partialCount ? "warning" : ""}>
+          <span>Needs Setup</span>
+          <strong>{partialCount}</strong>
+          <small>Cloud sync waits for credentials</small>
+        </article>
+        <article>
+          <span>Label Profile</span>
+          <strong>50mm</strong>
+          <small>QR-only print mode</small>
+        </article>
+        <article>
+          <span>Scan Policy</span>
+          <strong>Confirm</strong>
+          <small>Unknown QR/RFID approval flow</small>
+        </article>
+      </section>
+
+      <div className="system-layout">
+        <section className="ops-card system-main-card">
+          <header>
+            <h2>Configuration Matrix</h2>
+            <button type="button">Review</button>
+          </header>
+          <div className="settings-grid">
+            {settingsControls.map((control) => (
+              <article key={control.label}>
+                <div>
+                  <strong>{control.label}</strong>
+                  <span>{control.detail}</span>
+                </div>
+                <b>{control.value}</b>
+                <SystemStatusBadge status={control.status} />
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <aside className="ops-card system-side-card">
+          <header>
+            <h2>Deployment Profile</h2>
+            <button type="button">Vercel</button>
+          </header>
+          <div className="deployment-profile">
+            <span><small>Framework</small><b>Vite + React</b></span>
+            <span><small>Node</small><b>22.x</b></span>
+            <span><small>Build</small><b>npm run build</b></span>
+            <span><small>Output</small><b>dist</b></span>
+          </div>
+          <div className="settings-callout">
+            <strong>Next production step</strong>
+            <p>Add Supabase env vars when you want one shared database instead of browser-local storage.</p>
+          </div>
+        </aside>
+      </div>
+    </section>
+  );
+}
+
+function IntegrationsPage() {
+  const readyCount = integrationProviders.filter((provider) => provider.status === "Ready to Connect").length;
+
+  return (
+    <section className="system-page integrations-page">
+      <header className="system-hero">
+        <div>
+          <p>Connection Hub</p>
+          <h1>Integrations</h1>
+          <span>Prepared connection slots for Supabase, ServiceNow, Jira, and custom webhooks.</span>
+        </div>
+        <div className="system-hero-actions">
+          <button type="button">Add Provider</button>
+          <button type="button">Test Webhook</button>
+        </div>
+      </header>
+
+      <section className="system-kpis">
+        <article>
+          <span>Ready Slots</span>
+          <strong>{readyCount}</strong>
+          <small>Provider cards prepared</small>
+        </article>
+        <article>
+          <span>Database</span>
+          <strong>Supabase</strong>
+          <small>Recommended shared backend</small>
+        </article>
+        <article>
+          <span>Service Desk</span>
+          <strong>2</strong>
+          <small>ServiceNow and Jira templates</small>
+        </article>
+        <article className="warning">
+          <span>Secrets</span>
+          <strong>0</strong>
+          <small>No credentials stored in frontend</small>
+        </article>
+      </section>
+
+      <section className="integration-grid">
+        {integrationProviders.map((provider) => (
+          <article className="ops-card integration-card" key={provider.name}>
+            <header>
+              <div>
+                <span>{provider.icon}</span>
+                <h2>{provider.name}</h2>
+              </div>
+              <IntegrationStatusBadge status={provider.status} />
+            </header>
+            <p>{provider.detail}</p>
+            <div className="integration-fields">
+              {provider.fields.map((field) => (
+                <span key={field}>{field}</span>
+              ))}
+            </div>
+            <div className="integration-next-step">
+              <small>{provider.category}</small>
+              <strong>{provider.nextStep}</strong>
+            </div>
+            <button type="button">{provider.status === "Planned" ? "Plan Connector" : "Configure"}</button>
+          </article>
+        ))}
+      </section>
+    </section>
+  );
+}
+
+function AuditLogsPage() {
+  const [severityFilter, setSeverityFilter] = useState("All Severity");
+  const [sourceFilter, setSourceFilter] = useState("All Sources");
+
+  const sources = useMemo(() => Array.from(new Set(auditLogEntries.map((entry) => entry.source))).sort(), []);
+  const filteredLogs = useMemo(() => {
+    return auditLogEntries.filter((entry) => {
+      const matchesSeverity = severityFilter === "All Severity" || entry.severity === severityFilter;
+      const matchesSource = sourceFilter === "All Sources" || entry.source === sourceFilter;
+      return matchesSeverity && matchesSource;
+    });
+  }, [severityFilter, sourceFilter]);
+
+  const warningCount = auditLogEntries.filter((entry) => entry.severity !== "Info").length;
+
+  return (
+    <section className="system-page audit-page">
+      <header className="system-hero">
+        <div>
+          <p>Operations Evidence</p>
+          <h1>Audit Logs</h1>
+          <span>Trace scans, imports, QR printing, fiber validation, sync gaps, and future integration events.</span>
+        </div>
+        <div className="system-hero-actions">
+          <button type="button">Export CSV</button>
+          <button type="button">Retention</button>
+        </div>
+      </header>
+
+      <section className="system-kpis">
+        <article>
+          <span>Total Events</span>
+          <strong>{auditLogEntries.length}</strong>
+          <small>Recent operational sample</small>
+        </article>
+        <article className={warningCount ? "warning" : ""}>
+          <span>Needs Review</span>
+          <strong>{warningCount}</strong>
+          <small>Warnings and critical events</small>
+        </article>
+        <article>
+          <span>Sources</span>
+          <strong>{sources.length}</strong>
+          <small>Scanner, registry, print, sync</small>
+        </article>
+        <article>
+          <span>Retention</span>
+          <strong>90d</strong>
+          <small>Recommended when cloud-backed</small>
+        </article>
+      </section>
+
+      <section className="rack-toolbar system-toolbar ops-card">
+        <select value={severityFilter} onChange={(event) => setSeverityFilter(event.target.value)}>
+          <option>All Severity</option>
+          <option>Info</option>
+          <option>Warning</option>
+          <option>Critical</option>
+        </select>
+        <select value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value)}>
+          <option>All Sources</option>
+          {sources.map((source) => (
+            <option key={source}>{source}</option>
+          ))}
+        </select>
+      </section>
+
+      <section className="ops-card audit-log-card">
+        <header>
+          <h2>Event Trail</h2>
+          <button type="button">{filteredLogs.length} events</button>
+        </header>
+        <div className="audit-table">
+          <div className="audit-head">
+            <span>Event</span>
+            <span>Actor</span>
+            <span>Source</span>
+            <span>Severity</span>
+            <span>Time</span>
+          </div>
+          {filteredLogs.map((entry) => (
+            <article key={entry.id}>
+              <span>
+                <b>{entry.action}</b>
+                <small>{entry.id} / {entry.target}</small>
+                <em>{entry.detail}</em>
+              </span>
+              <span>{entry.actor}</span>
+              <span>{entry.source}</span>
+              <AuditSeverityBadge severity={entry.severity} />
+              <span>{entry.time}</span>
+            </article>
+          ))}
+        </div>
+      </section>
+    </section>
+  );
+}
+
+function SystemStatusBadge({ status }: { status: SystemHealthStatus }) {
+  return <em className={`system-status ${status.toLowerCase()}`}>{status}</em>;
+}
+
+function IntegrationStatusBadge({ status }: { status: IntegrationProvider["status"] }) {
+  return <em className={`integration-status ${status.toLowerCase().replaceAll(" ", "-")}`}>{status}</em>;
+}
+
+function AuditSeverityBadge({ severity }: { severity: AuditLogEntry["severity"] }) {
+  return <em className={`audit-severity ${severity.toLowerCase()}`}>{severity}</em>;
 }
 
 function RacksPage({ onOpenScanner }: { onOpenScanner: () => void }) {
