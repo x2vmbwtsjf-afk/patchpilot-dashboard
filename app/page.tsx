@@ -1561,7 +1561,19 @@ export default function DashboardPage() {
   const [isFiberValidatorOpen, setIsFiberValidatorOpen] = useState(false);
   const [scanMessage, setScanMessage] = useState("Point the camera at a PatchPilot QR label.");
   const [actionNotice, setActionNotice] = useState("Command is ready: scan assets, create labels, import spreadsheets, or prepare service desk integrations.");
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
+  const [isHelpOpen, setIsHelpOpen] = useState(false);
+  const [readNotifs, setReadNotifs] = useState<Set<number>>(new Set());
   const commandImportInputRef = useRef<HTMLInputElement | null>(null);
+
+  const notifications = [
+    { id: 1, severity: "critical" as Tone, title: "Rack DC1-R04 overheating", detail: "Temp 42°C — exceeds 40°C threshold", time: "2m ago" },
+    { id: 2, severity: "amber"    as Tone, title: "Fiber validation failed", detail: "Port SFP-12 signal below threshold on DC2", time: "18m ago" },
+    { id: 3, severity: "amber"    as Tone, title: "3 assets missing QR label", detail: "SRV-019, SRV-021, SW-044 need printing", time: "1h ago" },
+    { id: 4, severity: "blue"     as Tone, title: "Import completed", detail: "47 assets added from rack-audit-june.xlsx", time: "2h ago" },
+    { id: 5, severity: "slate"    as Tone, title: "Supabase sync pending", detail: "No credentials set — running offline only", time: "3h ago" },
+  ];
+  const unreadCount = notifications.filter((n) => !readNotifs.has(n.id)).length;
 
   async function refreshSavedAssets() {
     try {
@@ -1841,8 +1853,62 @@ export default function DashboardPage() {
               <div className="topbar-right">
                 <span className="online-dot" />
                 <strong>Online</strong>
-                <button className="bell" type="button">5</button>
-                <button className="help" type="button">?</button>
+
+                {/* ── Notifications bell ── */}
+                <div className="topbar-dropdown-wrap">
+                  <button className="bell" onClick={() => { setIsNotifOpen((v) => !v); setIsHelpOpen(false); }} type="button">
+                    {unreadCount > 0 ? unreadCount : ""}
+                  </button>
+                  {isNotifOpen && (
+                    <div className="notif-panel">
+                      <header>
+                        <span>Notifications</span>
+                        <button onClick={() => setReadNotifs(new Set(notifications.map((n) => n.id)))} type="button">Mark all read</button>
+                      </header>
+                      <div className="notif-list">
+                        {notifications.map((n) => (
+                          <button className={`notif-row${readNotifs.has(n.id) ? " read" : ""}`} key={n.id} onClick={() => setReadNotifs((prev) => new Set([...prev, n.id]))} type="button">
+                            <span className={`notif-dot tone-${n.severity}`} />
+                            <div>
+                              <strong>{n.title}</strong>
+                              <small>{n.detail}</small>
+                            </div>
+                            <em>{n.time}</em>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* ── Help / shortcuts ── */}
+                <div className="topbar-dropdown-wrap">
+                  <button className="help" onClick={() => { setIsHelpOpen((v) => !v); setIsNotifOpen(false); }} type="button">?</button>
+                  {isHelpOpen && (
+                    <div className="help-panel">
+                      <header><span>Keyboard Shortcuts</span></header>
+                      <div className="help-list">
+                        {([
+                          ["CMD + K",  "Open global search"],
+                          ["CMD + S",  "Open QR scanner"],
+                          ["CMD + N",  "New asset / QR label"],
+                          ["CMD + I",  "Import spreadsheet"],
+                          ["ESC",      "Close panels / search"],
+                          ["↑ / ↓",   "Navigate list items"],
+                        ] as [string, string][]).map(([key, desc]) => (
+                          <div className="help-row" key={key}>
+                            <kbd>{key}</kbd>
+                            <span>{desc}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="help-footer">
+                        <a href="https://dashboard-web-lime-omega.vercel.app" rel="noreferrer" target="_blank">Open full docs ↗</a>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 <div className="user-chip">
                   <span>DM</span>
                   <div>
