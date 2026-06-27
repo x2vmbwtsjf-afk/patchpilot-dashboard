@@ -908,6 +908,69 @@
   cursor: pointer;
 }
 
+/* ── Live signal indicator ── */
+.fiber-live-indicator {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0 14px 10px;
+  border-radius: 10px;
+  padding: 12px 14px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(255, 255, 255, 0.04);
+  transition: background 0.25s, border-color 0.25s;
+}
+
+.fiber-live-indicator.signal {
+  border-color: rgba(61, 220, 132, 0.45);
+  background: rgba(61, 220, 132, 0.1);
+}
+
+.fiber-live-indicator.no-signal {
+  border-color: rgba(255, 93, 102, 0.35);
+  background: rgba(255, 93, 102, 0.07);
+}
+
+.fiber-live-indicator strong {
+  display: block;
+  font-size: 0.9rem;
+}
+
+.fiber-live-indicator.signal strong   { color: var(--green); }
+.fiber-live-indicator.no-signal strong { color: var(--red); }
+.fiber-live-indicator.waiting strong  { color: var(--muted); }
+
+.fiber-live-indicator small {
+  display: block;
+  font-size: 0.72rem;
+  color: #8fa8c0;
+  margin-top: 2px;
+}
+
+/* pulsing dot */
+.fiber-live-dot {
+  flex-shrink: 0;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+
+.fiber-live-indicator.signal   .fiber-live-dot { background: var(--green); animation: fiber-pulse 1s infinite; }
+.fiber-live-indicator.no-signal .fiber-live-dot { background: var(--red); }
+.fiber-live-indicator.waiting   .fiber-live-dot { background: var(--muted); }
+
+@keyframes fiber-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: 0.45; transform: scale(1.35); }
+}
+
+.fiber-cam-error {
+  margin: 0 14px 8px;
+  color: var(--amber);
+  font-size: 0.76rem;
+}
+
 .fiber-signal-note {
   display: grid;
   gap: 4px;

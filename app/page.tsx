@@ -3779,114 +3779,95 @@ function FiberSignalModal({
   onClose: () => void;
   onDetected: (result: FiberSignalResult) => void;
 }) {
-  const videoRef = useRef<HTMLVideoElement | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const frameRef = useRef<number | null>(null);
-  const stableHitsRef = useRef(0);
-  const resolvedRef = useRef(false);
-  const [validatorStatus, setValidatorStatus] = useState("Starting camera...");
-  const [signalHint, setSignalHint] = useState("No laser signal yet");
+  const videoRef   = useRef<HTMLVideoElement | null>(null);
+  const canvasRef  = useRef<HTMLCanvasElement | null>(null);
+  const streamRef  = useRef<MediaStream | null>(null);
+  const frameRef   = useRef<number | null>(null);
+  const stableRef  = useRef(0);
+
+  type LiveStatus = "waiting" | "signal" | "no-signal";
+  const [camReady, setCamReady]       = useState(false);
+  const [live, setLive]               = useState<LiveStatus>("waiting");
+  const [liveResult, setLiveResult]   = useState<FiberSignalResult | null>(null);
+  const [camError, setCamError]       = useState("");
 
   useEffect(() => {
     let isMounted = true;
 
     function stopCamera() {
-      if (frameRef.current) {
-        window.cancelAnimationFrame(frameRef.current);
-        frameRef.current = null;
-      }
-
-      streamRef.current?.getTracks().forEach((track) => track.stop());
+      if (frameRef.current) { window.cancelAnimationFrame(frameRef.current); frameRef.current = null; }
+      streamRef.current?.getTracks().forEach((t) => t.stop());
       streamRef.current = null;
     }
 
     async function startCamera() {
-      const video = videoRef.current;
+      const video  = videoRef.current;
       const canvas = canvasRef.current;
-
       if (!video || !canvas || !navigator.mediaDevices?.getUserMedia) {
-        setValidatorStatus("Camera access is not available in this browser.");
-        return;
+        setCamError("Camera not available in this browser."); return;
       }
-
-      if (!window.isSecureContext) {
-        setValidatorStatus("Camera access needs HTTPS on iPhone.");
-      }
-
       try {
         const stream = await navigator.mediaDevices.getUserMedia({
-          video: {
-            facingMode: { ideal: "environment" },
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
-          },
+          video: { facingMode: { ideal: "environment" }, width: { ideal: 1280 }, height: { ideal: 720 } },
           audio: false
         });
-
-        if (!isMounted) {
-          stream.getTracks().forEach((track) => track.stop());
-          return;
-        }
-
+        if (!isMounted) { stream.getTracks().forEach((t) => t.stop()); return; }
         streamRef.current = stream;
-        video.srcObject = stream;
+        video.srcObject   = stream;
         video.setAttribute("playsinline", "true");
         await video.play();
-        setValidatorStatus("Camera ready — touch the fiber tip to the camera lens.");
+        setCamReady(true);
 
-        const context = canvas.getContext("2d", { willReadFrequently: true });
+        const ctx = canvas.getContext("2d", { willReadFrequently: true });
+        let skip  = 0;
 
-        // Sample every 2nd animation frame to reduce CPU pressure on mobile
-        let frameSkip = 0;
-
-        const scanFrame = () => {
-          if (!isMounted || resolvedRef.current) return;
-          frameSkip++;
-
-          if (context && video.videoWidth && video.videoHeight && frameSkip % 2 === 0) {
-            canvas.width = video.videoWidth;
+        const scan = () => {
+          if (!isMounted) return;
+          skip++;
+          if (ctx && video.videoWidth && video.videoHeight && skip % 2 === 0) {
+            canvas.width  = video.videoWidth;
             canvas.height = video.videoHeight;
-            context.drawImage(video, 0, 0, canvas.width, canvas.height);
-
-            const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-            const result = detectFiberSignal(imageData);
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            const result = detectFiberSignal(ctx.getImageData(0, 0, canvas.width, canvas.height));
 
             if (result) {
-              stableHitsRef.current += 1;
-              const colorLabel = result.color === "red" ? "🔴 Red laser (~650nm)" : result.color === "purple" ? "🟣 IR signal (~850–1550nm)" : "⚪ White laser";
-              setSignalHint(`${colorLabel} — hold steady… (${stableHitsRef.current}/10)`);
-
-              // Require 10 consecutive positive frames (≈ 333 ms) to avoid false triggers
-              if (stableHitsRef.current >= 10) {
-                resolvedRef.current = true;
-                stopCamera();
-                onDetected(result);
-                return;
+              stableRef.current = Math.min(stableRef.current + 1, 10);
+              if (stableRef.current >= 6) {
+                setLive("signal");
+                setLiveResult(result);
               }
             } else {
-              // Reset counter on miss — requires sustained signal
-              stableHitsRef.current = 0;
-              setSignalHint("No laser signal — room light ignored. Touch fiber tip to lens.");
+              stableRef.current = Math.max(stableRef.current - 1, 0);
+              if (stableRef.current === 0) {
+                setLive("no-signal");
+                setLiveResult(null);
+              }
             }
           }
-
-          frameRef.current = window.requestAnimationFrame(scanFrame);
+          frameRef.current = window.requestAnimationFrame(scan);
         };
-
-        frameRef.current = window.requestAnimationFrame(scanFrame);
+        frameRef.current = window.requestAnimationFrame(scan);
       } catch {
-        setValidatorStatus("Camera permission was blocked. Allow camera access and try again.");
+        setCamError("Camera permission blocked. Allow camera access and try again.");
       }
     }
 
     void startCamera();
+    return () => { isMounted = false; stopCamera(); };
+  }, []);
 
-    return () => {
-      isMounted = false;
-      stopCamera();
-    };
-  }, [onDetected]);
+  const colorLabel = liveResult?.color === "red"
+    ? "🔴 Red laser ~650nm"
+    : liveResult?.color === "purple"
+    ? "🟣 IR ~850–1550nm"
+    : "⚪ White laser";
+
+  function saveResult(present: boolean) {
+    onDetected(present
+      ? (liveResult ?? { color: "red", score: 80 })
+      : { color: "white", score: 0 }
+    );
+  }
 
   return (
     <div className="scanner-overlay" role="dialog" aria-modal="true" aria-label="Validate fiber laser signal">
@@ -3894,12 +3875,20 @@ function FiberSignalModal({
         <header>
           <div>
             <p>Fiber Validation</p>
-            <h2>Run Signal Test</h2>
-            <span>Touch the fiber tip directly to the camera lens. Room light is ignored — only laser-level saturation triggers detection.</span>
+            <h2>Signal Monitor</h2>
+            <span>Touch the fiber tip to the camera lens. The indicator updates live — camera stays open until you close.</span>
           </div>
           <button onClick={onClose} type="button">Close</button>
         </header>
 
+        {/* ── Live signal indicator ── */}
+        <div className={`fiber-live-indicator ${live}`}>
+          {live === "waiting"   && <><span className="fiber-live-dot" />  <strong>Waiting for camera…</strong></>}
+          {live === "no-signal" && <><span className="fiber-live-dot" />  <strong>No signal</strong><small>Touch fiber tip to lens</small></>}
+          {live === "signal"    && <><span className="fiber-live-dot" />  <strong>Signal detected</strong><small>{colorLabel}{liveResult?.score ? ` — confidence ${liveResult.score}%` : ""}</small></>}
+        </div>
+
+        {/* ── Camera feed ── */}
         <div className="scanner-camera fiber-signal-camera">
           <video ref={videoRef} muted playsInline />
           <canvas ref={canvasRef} aria-hidden="true" />
@@ -3908,22 +3897,18 @@ function FiberSignalModal({
           </div>
         </div>
 
-        <div className="scanner-status fiber-signal-status">
-          <strong>{validatorStatus}</strong>
-          <small>{signalHint}</small>
-        </div>
+        {camError && <p className="fiber-cam-error">{camError}</p>}
 
-        <div className="fiber-signal-how">
-          <p>How it works: the camera looks for sensor-saturating laser light (R≥242 with R/G ≥ 2.8×, or all channels ≥ 242 for white). Normal room light, LEDs, and phone screens don't reach this level in a small spot.</p>
-        </div>
-
-        <div className="fiber-signal-manual">
-          <p>Can't get auto-detection? Log result manually:</p>
-          <div>
-            <button onClick={() => { onDetected({ color: "red",   score: 80 }); }} type="button" className="fiber-btn-good">Signal Present ✓</button>
-            <button onClick={() => { onDetected({ color: "white", score: 10 }); }} type="button" className="fiber-btn-bad">No Signal ✗</button>
+        {/* ── Save buttons ── */}
+        {camReady && (
+          <div className="fiber-signal-manual">
+            <p>Log result for this fiber:</p>
+            <div>
+              <button className="fiber-btn-good" onClick={() => saveResult(true)}  type="button">Signal Present ✓</button>
+              <button className="fiber-btn-bad"  onClick={() => saveResult(false)} type="button">No Signal ✗</button>
+            </div>
           </div>
-        </div>
+        )}
       </section>
     </div>
   );
