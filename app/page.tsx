@@ -2758,8 +2758,86 @@ function QRStudio({
   }
 
   function printLabel() {
-    setMessage(`Print label prepared for ${asset.id}`);
-    window.setTimeout(() => window.print(), 50);
+    if (!qrImage) {
+      setMessage("QR is still generating");
+      return;
+    }
+
+    const frame = document.createElement("iframe");
+    frame.title = `Print QR ${asset.id}`;
+    frame.style.position = "fixed";
+    frame.style.right = "0";
+    frame.style.bottom = "0";
+    frame.style.width = "0";
+    frame.style.height = "0";
+    frame.style.border = "0";
+    document.body.appendChild(frame);
+
+    const printDocument = frame.contentWindow?.document;
+    if (!printDocument) {
+      frame.remove();
+      setMessage("Print preview could not open");
+      return;
+    }
+
+    const printPageTitle = asset.id.replace(/[&<>"']/g, (character) => ({
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      "\"": "&quot;",
+      "'": "&#39;"
+    })[character] ?? character);
+
+    printDocument.open();
+    printDocument.write(`
+      <!doctype html>
+      <html>
+        <head>
+          <title>${printPageTitle} QR</title>
+          <style>
+            @page { size: 50mm 50mm; margin: 0; }
+            * { box-sizing: border-box; }
+            html,
+            body {
+              width: 50mm;
+              height: 50mm;
+              margin: 0;
+              padding: 0;
+              background: #ffffff;
+            }
+            body {
+              display: grid;
+              place-items: center;
+            }
+            img {
+              width: 42mm;
+              height: 42mm;
+              display: block;
+              image-rendering: pixelated;
+            }
+          </style>
+        </head>
+        <body>
+          <img alt="PatchPilot QR code" src="${qrImage}" />
+        </body>
+      </html>
+    `);
+    printDocument.close();
+
+    const qr = printDocument.querySelector("img");
+    const printQr = () => {
+      frame.contentWindow?.focus();
+      frame.contentWindow?.print();
+      window.setTimeout(() => frame.remove(), 1000);
+    };
+
+    if (qr?.complete) {
+      window.setTimeout(printQr, 50);
+    } else {
+      qr?.addEventListener("load", () => window.setTimeout(printQr, 50), { once: true });
+    }
+
+    setMessage(`QR print prepared for ${asset.id}`);
   }
 
   function downloadQr() {
@@ -2802,7 +2880,7 @@ function QRStudio({
 
             <div className="qr-primary-actions">
               <button onClick={() => void saveAsset()} type="button">Save to DB</button>
-              <button onClick={printLabel} type="button">Print</button>
+              <button onClick={printLabel} type="button">Print QR</button>
               <button onClick={onOpenScanner} type="button">Scan</button>
             </div>
           </div>

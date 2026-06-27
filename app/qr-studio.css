@@ -582,7 +582,17 @@
 }
 
 @media print {
+  @page {
+    size: 50mm 50mm;
+    margin: 0;
+  }
+
+  html,
   body {
+    width: 50mm;
+    height: 50mm;
+    margin: 0 !important;
+    padding: 0 !important;
     min-width: 0;
     background: #ffffff !important;
     color: #000000;
@@ -619,17 +629,23 @@
 
   .print-label {
     display: grid !important;
-    grid-template-columns: minmax(0, 1fr) 1.05in;
-    gap: 0.12in;
-    align-items: start;
-    width: 3.9in;
-    min-height: 1.25in;
+    place-items: center;
+    width: 50mm;
+    min-height: 50mm;
     margin: 0 !important;
-    border: 1px solid #000000 !important;
-    padding: 0.12in !important;
+    border: 0 !important;
+    padding: 0 !important;
     background: #ffffff !important;
     color: #000000 !important;
     page-break-inside: avoid;
+  }
+
+  .print-label > div,
+  .print-label strong,
+  .print-label span,
+  .print-label small,
+  .print-label em {
+    display: none !important;
   }
 
   .print-label strong {
@@ -648,9 +664,10 @@
   }
 
   .print-label img {
-    width: 1.05in !important;
-    height: 1.05in !important;
-    border: 1px solid #000000;
+    width: 42mm !important;
+    height: 42mm !important;
+    border: 0 !important;
+    image-rendering: pixelated;
   }
 }
 
