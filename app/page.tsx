@@ -255,10 +255,11 @@ const navItems: NavItem[] = [
   { label: "Racks", icon: "R" },
   { label: "Cables", icon: "C" },
   { label: "Map", icon: "M" },
-  { label: "Reports", icon: "P" }
+  { label: "Reports", icon: "P" },
+  { label: "Settings", icon: "SE" },
+  { label: "Integrations", icon: "IN" },
+  { label: "Audit Logs", icon: "AU" }
 ];
-
-const systemItems = ["Settings", "Integrations", "Audit Logs"];
 
 const metrics: Metric[] = [
   { label: "Assets", value: "1,246", delta: "12 new", icon: "BX" },
@@ -2033,16 +2034,6 @@ export default function DashboardPage() {
             </button>
           ))}
         </nav>
-
-        <div className="system-menu">
-          <p>System</p>
-          {systemItems.map((item) => (
-            <button className={activeNav === item ? "active" : ""} key={item} onClick={() => setActiveNav(item)} type="button">
-              <span className="nav-icon">{item.slice(0, 2).toUpperCase()}</span>
-              {item}
-            </button>
-          ))}
-        </div>
 
         <section className="sync-panel">
           <p>Sync Status</p>
