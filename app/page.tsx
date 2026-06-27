@@ -86,8 +86,9 @@ type AuditLogEntry = {
 };
 
 type FiberSignalResult = {
-  color: "red" | "white";
+  color: "red" | "white" | "purple";
   score: number;
+  wavelengthHint?: string;
 };
 
 type Scan = {
@@ -1420,27 +1421,34 @@ function detectFiberSignal(imageData: ImageData): FiberSignalResult | null {
   const { data, width, height } = imageData;
 
   // ── Thresholds tuned for fiber laser physics ──────────────────────────
-  // Red laser (650 nm): clips the red channel near 255, G+B stay low
-  const RED_SAT      = 242;   // red channel must be sensor-saturating
-  const RED_RATIO    = 2.8;   // R / G  and  R / B  must exceed this ratio
-  // White/IR laser: all three channels near saturation, very tight spread
+  //
+  // RED laser 650 nm — visible, clips red channel hard
+  const RED_SAT   = 242;
+  const RED_RATIO = 2.8;   // R must be 2.8× both G and B
+  //
+  // WHITE / broadband VIS — all channels near saturation
   const WHITE_SAT    = 242;
-  const WHITE_SPREAD = 14;    // |max − min| of R,G,B — spectrally pure light is tight
+  const WHITE_SPREAD = 14;
+  //
+  // IR bleed  850 nm / 1310 nm / 1550 nm — camera IR-cut filter is imperfect.
+  // IR stimulates red + blue photosites but NOT green → appears purple/violet.
+  // Signature: R and B are both elevated, G is significantly suppressed.
+  const IR_MIN_RB  = 160;   // both R and B must be this bright
+  const IR_G_RATIO = 1.8;   // R/G and B/G must both exceed this (G stays dim)
+  const IR_MAX_RATIO = 0.015; // still must be a small spot
   // ─────────────────────────────────────────────────────────────────────
 
-  // Sample only the central 70 % of the frame — edge areas often contain
-  // room fixtures, windows, and status LEDs that could false-trigger.
   const xMin = Math.floor(width  * 0.15);
   const xMax = Math.floor(width  * 0.85);
   const yMin = Math.floor(height * 0.15);
   const yMax = Math.floor(height * 0.85);
   const step = 2;
 
-  let redPx   = 0;
-  let whitePx = 0;
-  let total   = 0;
-  let maxR    = 0;
-  let maxBrt  = 0;
+  let redPx    = 0;
+  let whitePx  = 0;
+  let irPx     = 0;
+  let total    = 0;
+  let maxBrt   = 0;
 
   for (let y = yMin; y < yMax; y += step) {
     for (let x = xMin; x < xMax; x += step) {
@@ -1452,35 +1460,47 @@ function detectFiberSignal(imageData: ImageData): FiberSignalResult | null {
       const spd = brt - Math.min(r, g, b);
 
       total++;
-      if (r > maxR)   maxR  = r;
       if (brt > maxBrt) maxBrt = brt;
 
-      // Red laser: sensor-saturating red with extreme channel dominance
+      // Red laser 650 nm
       if (r >= RED_SAT
           && r / Math.max(g, 1) >= RED_RATIO
           && r / Math.max(b, 1) >= RED_RATIO) {
         redPx++;
       }
-
-      // White laser: all channels near saturation, very tight spectral spread
-      if (r >= WHITE_SAT && g >= WHITE_SAT && b >= WHITE_SAT && spd <= WHITE_SPREAD) {
+      // White / VIS laser
+      else if (r >= WHITE_SAT && g >= WHITE_SAT && b >= WHITE_SAT && spd <= WHITE_SPREAD) {
         whitePx++;
+      }
+      // IR bleed — purple/violet signature: R≈B high, G low
+      else if (r >= IR_MIN_RB
+          && b >= IR_MIN_RB
+          && r / Math.max(g, 1) >= IR_G_RATIO
+          && b / Math.max(g, 1) >= IR_G_RATIO
+          && Math.abs(r - b) < 60) {   // R and B close to each other → purple
+        irPx++;
       }
     }
   }
 
-  const hotPx    = redPx + whitePx;
+  const hotPx    = redPx + whitePx + irPx;
   const hotRatio = hotPx / Math.max(total, 1);
 
-  // Must be a small but definite spot:
-  //  • At least 4 qualifying pixels (rules out noise / cosmic rays)
-  //  • Less than 1.5 % of sampled area (rules out diffuse room light / LEDs)
-  //  • The brightest channel must be truly saturating
-  if (hotPx < 4 || hotRatio > 0.015 || maxBrt < 242) return null;
+  if (hotPx < 4 || hotRatio > IR_MAX_RATIO || maxBrt < 140) return null;
+
+  // Determine dominant signal type
+  if (irPx > redPx && irPx > whitePx) {
+    return {
+      color: "purple",
+      score: Math.min(100, Math.round(irPx / 0.5)),
+      wavelengthHint: "IR (850–1550 nm) — purple/violet bleed through camera filter"
+    };
+  }
 
   return {
     color: redPx >= whitePx ? "red" : "white",
-    score: Math.min(100, Math.round(Math.min(hotPx / 0.6, 100)))
+    score: Math.min(100, Math.round(hotPx / 0.6)),
+    wavelengthHint: redPx >= whitePx ? "Red laser ~650 nm (VFL)" : "White / broadband VIS"
   };
 }
 
@@ -2134,7 +2154,8 @@ export default function DashboardPage() {
             onClose={() => setIsFiberValidatorOpen(false)}
             onDetected={(result) => {
               setIsFiberValidatorOpen(false);
-              setActionNotice(`אות אור לייזר זוהה (${result.color === "red" ? "אדום" : "לבן"}). Fiber signal validation passed.`);
+              const colorName = result.color === "red" ? "אדום 650nm" : result.color === "purple" ? "IR סגול (850–1550nm)" : "לבן VIS";
+              setActionNotice(`אות לייזר זוהה (${colorName}${result.wavelengthHint ? ` — ${result.wavelengthHint}` : ""}). Fiber signal validation passed.`);
             }}
           />
         )}
@@ -3833,7 +3854,8 @@ function FiberSignalModal({
 
             if (result) {
               stableHitsRef.current += 1;
-              setSignalHint(`${result.color === "red" ? "🔴 Red laser" : "⚪ White laser"} detected — hold steady… (${stableHitsRef.current}/10)`);
+              const colorLabel = result.color === "red" ? "🔴 Red laser (~650nm)" : result.color === "purple" ? "🟣 IR signal (~850–1550nm)" : "⚪ White laser";
+              setSignalHint(`${colorLabel} — hold steady… (${stableHitsRef.current}/10)`);
 
               // Require 10 consecutive positive frames (≈ 333 ms) to avoid false triggers
               if (stableHitsRef.current >= 10) {
