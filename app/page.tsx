@@ -145,6 +145,10 @@ type AssetRecord = {
 
 type AssetCategory = "Cables" | "GBICs" | "Servers" | "Other";
 
+type InvTab = "SFPs" | "Fiber" | "Copper" | "Switches" | "Servers" | "Nodes" | "More";
+type InvUnit = { id: string; serial: string; name: string; status: string; location: string; rack: string };
+type InvGroup = { id: string; tab: InvTab; vendor: string; model: string; spec: string; tone: Tone; qty: number; units?: InvUnit[] };
+
 type AssetDatabaseApi = {
   getAll: () => Promise<AssetRecord[]>;
   put: (asset: AssetRecord) => Promise<void>;
@@ -1299,6 +1303,99 @@ const demoAssetInventory: AssetRecord[] = [
     createdAt: "2026-05-01T08:15:00.000Z",
     updatedAt: "2026-05-28T02:56:00.000Z"
   }
+];
+
+const inventoryStock: InvGroup[] = [
+  // ── SFPs ──────────────────────────────────────────────────────────────────
+  { id: "sfp-01", tab: "SFPs", vendor: "Cisco",    model: "SFP-10G-SR",       spec: "10G · SR · MM 850nm · 300m",   tone: "blue",   qty: 18 },
+  { id: "sfp-02", tab: "SFPs", vendor: "Intel",    model: "E10GSFPSR",        spec: "10G · SR · MM 850nm · 300m",   tone: "blue",   qty: 7  },
+  { id: "sfp-03", tab: "SFPs", vendor: "Cisco",    model: "SFP-10G-LR",       spec: "10G · LR · SM 1310nm · 10km",  tone: "cyan",   qty: 6  },
+  { id: "sfp-04", tab: "SFPs", vendor: "Finisar",  model: "FTLX1471D3BCV",   spec: "10G · LR · SM 1310nm · 10km",  tone: "cyan",   qty: 4  },
+  { id: "sfp-05", tab: "SFPs", vendor: "Cisco",    model: "QSFP-40G-SR4",    spec: "40G · SR4 · MM 850nm · 150m",  tone: "purple", qty: 5  },
+  { id: "sfp-06", tab: "SFPs", vendor: "Cisco",    model: "QSFP-100G-SR4",   spec: "100G · SR4 · MM 850nm · 100m", tone: "purple", qty: 3  },
+  { id: "sfp-07", tab: "SFPs", vendor: "Arista",   model: "SFP-25G-SR",      spec: "25G · SR · MM 850nm · 100m",   tone: "blue",   qty: 12 },
+  // ── Fiber ─────────────────────────────────────────────────────────────────
+  { id: "fib-01", tab: "Fiber", vendor: "", model: "OM3", spec: "LC-LC · 1m",     tone: "cyan",   qty: 40 },
+  { id: "fib-02", tab: "Fiber", vendor: "", model: "OM3", spec: "LC-LC · 3m",     tone: "cyan",   qty: 28 },
+  { id: "fib-03", tab: "Fiber", vendor: "", model: "OM3", spec: "LC-LC · 5m",     tone: "cyan",   qty: 15 },
+  { id: "fib-04", tab: "Fiber", vendor: "", model: "OM3", spec: "LC-LC · 10m",    tone: "cyan",   qty: 8  },
+  { id: "fib-05", tab: "Fiber", vendor: "", model: "OM4", spec: "LC-LC · 1m",     tone: "purple", qty: 25 },
+  { id: "fib-06", tab: "Fiber", vendor: "", model: "OM4", spec: "LC-LC · 3m",     tone: "purple", qty: 18 },
+  { id: "fib-07", tab: "Fiber", vendor: "", model: "OM4", spec: "MPO-MPO · 1m",   tone: "purple", qty: 10 },
+  { id: "fib-08", tab: "Fiber", vendor: "", model: "OS2 SM", spec: "LC-LC · 10m", tone: "blue",   qty: 6  },
+  { id: "fib-09", tab: "Fiber", vendor: "", model: "OS2 SM", spec: "LC-LC · 30m", tone: "blue",   qty: 3  },
+  // ── Copper ────────────────────────────────────────────────────────────────
+  { id: "cop-01", tab: "Copper", vendor: "", model: "Cat6A", spec: "RJ45 · 1ft", tone: "green", qty: 50 },
+  { id: "cop-02", tab: "Copper", vendor: "", model: "Cat6A", spec: "RJ45 · 3ft", tone: "green", qty: 35 },
+  { id: "cop-03", tab: "Copper", vendor: "", model: "Cat6A", spec: "RJ45 · 7ft", tone: "green", qty: 20 },
+  { id: "cop-04", tab: "Copper", vendor: "", model: "Cat6",  spec: "RJ45 · 3ft", tone: "slate", qty: 15 },
+  { id: "cop-05", tab: "Copper", vendor: "", model: "Cat6",  spec: "RJ45 · 7ft", tone: "slate", qty: 10 },
+  { id: "cop-06", tab: "Copper", vendor: "", model: "Cat5e", spec: "RJ45 · 3ft", tone: "amber", qty: 5  },
+  // ── Switches ──────────────────────────────────────────────────────────────
+  { id: "sw-01", tab: "Switches", vendor: "Cisco",  model: "C9300-48P",    spec: "48-port PoE+ · 4×25G uplinks",      tone: "blue",   qty: 8, units: [
+    { id: "SW-9300-01", serial: "FDO2234A0XZ", name: "SW-ACCESS-01", status: "Active",      location: "DC1 / RACK-A01", rack: "RACK-A01" },
+    { id: "SW-9300-02", serial: "FDO2234A0YA", name: "SW-ACCESS-02", status: "Active",      location: "DC1 / RACK-A02", rack: "RACK-A02" },
+    { id: "SW-9300-03", serial: "FDO2234B1KP", name: "SW-ACCESS-03", status: "Active",      location: "DC1 / RACK-A03", rack: "RACK-A03" },
+    { id: "SW-9300-04", serial: "FDO2235C2QR", name: "SW-ACCESS-04", status: "Maintenance", location: "DC1 / RACK-A04", rack: "RACK-A04" },
+    { id: "SW-9300-05", serial: "FDO2235C3ST", name: "SW-ACCESS-05", status: "Active",      location: "DC1 / RACK-B01", rack: "RACK-B01" },
+    { id: "SW-9300-06", serial: "FDO2236D4UV", name: "SW-ACCESS-06", status: "Active",      location: "DC1 / RACK-B02", rack: "RACK-B02" },
+    { id: "SW-9300-07", serial: "FDO2236D5WX", name: "SW-ACCESS-07", status: "In Stock",    location: "Staging",        rack: ""         },
+    { id: "SW-9300-08", serial: "FDO2237E6YZ", name: "SW-ACCESS-08", status: "In Stock",    location: "Staging",        rack: ""         },
+  ]},
+  { id: "sw-02", tab: "Switches", vendor: "Cisco",  model: "C9500-40X",    spec: "40×10G · 2×100G uplinks",           tone: "cyan",   qty: 3, units: [
+    { id: "SW-9500-01", serial: "CAT2301A1BC", name: "SW-CORE-01", status: "Active",      location: "DC1 / RACK-C01", rack: "RACK-C01" },
+    { id: "SW-9500-02", serial: "CAT2301A2DE", name: "SW-CORE-02", status: "Active",      location: "DC1 / RACK-C02", rack: "RACK-C02" },
+    { id: "SW-9500-03", serial: "CAT2302B3FG", name: "SW-CORE-03", status: "Maintenance", location: "DC1 / RACK-C03", rack: "RACK-C03" },
+  ]},
+  { id: "sw-03", tab: "Switches", vendor: "Arista", model: "7280CR3",      spec: "32×100G QSFP28",                    tone: "purple", qty: 4, units: [
+    { id: "SW-AR7280-01", serial: "AR-7280-A12-01", name: "SW-LEAF-01", status: "Active",     location: "DC1 / RACK-A12", rack: "RACK-A12" },
+    { id: "SW-AR7280-02", serial: "AR-7280-A12-02", name: "SW-LEAF-02", status: "Active",     location: "DC1 / RACK-A12", rack: "RACK-A12" },
+    { id: "SW-AR7280-03", serial: "AR-7280-B07-03", name: "SW-LEAF-03", status: "Active",     location: "DC1 / RACK-B07", rack: "RACK-B07" },
+    { id: "SW-AR7280-04", serial: "AR-7280-B07-04", name: "SW-LEAF-04", status: "In Service", location: "DC1 / RACK-B07", rack: "RACK-B07" },
+  ]},
+  { id: "sw-04", tab: "Switches", vendor: "Arista", model: "7800R3",       spec: "Chassis · 576×100G",                tone: "amber",  qty: 2, units: [
+    { id: "SW-AR7800-01", serial: "AR-7800-B07-01", name: "SW-SPINE-01", status: "Active", location: "DC1 / RACK-B07", rack: "RACK-B07" },
+    { id: "SW-AR7800-02", serial: "AR-7800-D01-02", name: "SW-SPINE-02", status: "Active", location: "DC1 / RACK-D01", rack: "RACK-D01" },
+  ]},
+  // ── Servers ───────────────────────────────────────────────────────────────
+  { id: "srv-01", tab: "Servers", vendor: "HPE",        model: "ProLiant DL380 Gen10", spec: "2×Xeon · 256GB · 2×10G", tone: "blue",   qty: 7, units: [
+    { id: "SRV-DL380-01", serial: "DL380-A12-01", name: "SRV-API-01",  status: "Active",      location: "DC1 / RACK-A12", rack: "RACK-A12" },
+    { id: "SRV-DL380-02", serial: "DL380-A12-02", name: "SRV-API-02",  status: "Active",      location: "DC1 / RACK-A12", rack: "RACK-A12" },
+    { id: "SRV-DL380-03", serial: "DL380-A12-03", name: "SRV-DB-01",   status: "Active",      location: "DC1 / RACK-A12", rack: "RACK-A12" },
+    { id: "SRV-DL380-04", serial: "DL380-A12-04", name: "SRV-DB-02",   status: "Maintenance", location: "DC1 / RACK-A12", rack: "RACK-A12" },
+    { id: "SRV-DL380-05", serial: "DL380-B07-05", name: "SRV-APP-01",  status: "Active",      location: "DC1 / RACK-B07", rack: "RACK-B07" },
+    { id: "SRV-DL380-06", serial: "DL380-B07-06", name: "SRV-APP-02",  status: "Active",      location: "DC1 / RACK-B07", rack: "RACK-B07" },
+    { id: "SRV-DL380-07", serial: "DL380-A12-07", name: "SRV-API-07",  status: "Active",      location: "DC1 / RACK-A12", rack: "RACK-A12" },
+  ]},
+  { id: "srv-02", tab: "Servers", vendor: "Dell",       model: "PowerEdge R750",       spec: "2×Xeon · 512GB · 2×25G", tone: "cyan",   qty: 5, units: [
+    { id: "SRV-R750-01", serial: "R750-C03-01", name: "SRV-WEB-01",   status: "Active",     location: "DC1 / RACK-C03", rack: "RACK-C03" },
+    { id: "SRV-R750-02", serial: "R750-C03-02", name: "SRV-WEB-02",   status: "Active",     location: "DC1 / RACK-C03", rack: "RACK-C03" },
+    { id: "SRV-R750-03", serial: "R750-C03-03", name: "SRV-WEB-03",   status: "Active",     location: "DC1 / RACK-C03", rack: "RACK-C03" },
+    { id: "SRV-R750-04", serial: "R750-D01-04", name: "SRV-CACHE-01", status: "In Service", location: "DC1 / RACK-D01", rack: "RACK-D01" },
+    { id: "SRV-R750-05", serial: "R750-D01-05", name: "SRV-CACHE-02", status: "In Service", location: "DC1 / RACK-D01", rack: "RACK-D01" },
+  ]},
+  { id: "srv-03", tab: "Servers", vendor: "Supermicro", model: "SYS-420GP-TNR",        spec: "4×GPU · 2×Xeon · 1TB",   tone: "purple", qty: 2, units: [
+    { id: "SRV-GPU-01", serial: "SMCI-420GP-01", name: "GPU-TRAIN-01", status: "Active",      location: "DC1 / RACK-C03", rack: "RACK-C03" },
+    { id: "SRV-GPU-02", serial: "SMCI-420GP-02", name: "GPU-TRAIN-02", status: "Maintenance", location: "DC1 / RACK-C03", rack: "RACK-C03" },
+  ]},
+  // ── Nodes ─────────────────────────────────────────────────────────────────
+  { id: "nod-01", tab: "Nodes", vendor: "Dell",        model: "PowerEdge R750xa",    spec: "4×A100 GPU · 2TB NVMe",    tone: "purple", qty: 3, units: [
+    { id: "NOD-R750XA-01", serial: "R750XA-C03-01", name: "GPU-NODE-01", status: "Active",     location: "DC1 / RACK-C03", rack: "RACK-C03" },
+    { id: "NOD-R750XA-02", serial: "R750XA-C03-02", name: "GPU-NODE-02", status: "Active",     location: "DC1 / RACK-C03", rack: "RACK-C03" },
+    { id: "NOD-R750XA-03", serial: "R750XA-C03-03", name: "GPU-NODE-03", status: "In Service", location: "DC1 / RACK-C03", rack: "RACK-C03" },
+  ]},
+  { id: "nod-02", tab: "Nodes", vendor: "Nvidia",      model: "DGX A100",            spec: "8×A100 · NVLink · 1TB",    tone: "green",  qty: 1, units: [
+    { id: "NOD-DGX-01", serial: "DGX-A100-D01-01", name: "DGX-PROD-01", status: "Active", location: "DC1 / RACK-D01", rack: "RACK-D01" },
+  ]},
+  { id: "nod-03", tab: "Nodes", vendor: "Supermicro",  model: "SYS-221GE-TNHR",      spec: "2×A100 · 8×NVMe · 25G",   tone: "blue",   qty: 2, units: [
+    { id: "NOD-221GE-01", serial: "SMCI-221GE-01", name: "GPU-INF-01", status: "Active", location: "DC1 / RACK-D01", rack: "RACK-D01" },
+    { id: "NOD-221GE-02", serial: "SMCI-221GE-02", name: "GPU-INF-02", status: "Active", location: "DC1 / RACK-D01", rack: "RACK-D01" },
+  ]},
+  // ── More ──────────────────────────────────────────────────────────────────
+  { id: "mor-01", tab: "More", vendor: "APC",       model: "UPS SRT6KRMXLI",   spec: "6kVA · 4U rackmount",    tone: "amber", qty: 4  },
+  { id: "mor-02", tab: "More", vendor: "Panduit",   model: "Patch Panel 48P",  spec: "1U · Cat6A · angled",    tone: "slate", qty: 12 },
+  { id: "mor-03", tab: "More", vendor: "Vertiv",    model: "PDU VPDU-12A",     spec: "12× C13 · metered",      tone: "green", qty: 8  },
+  { id: "mor-04", tab: "More", vendor: "Pure Stor.", model: "FlashArray//X50",  spec: "77TB NVMe · 4×25G",      tone: "blue",  qty: 2  },
 ];
 
 function createAssetId() {
@@ -3075,125 +3172,91 @@ function AssetsInventoryPage({
   savedAssets,
   onCreateAsset,
   onAssetsImported,
-  onOpenQrStudio
+  onOpenQrStudio,
 }: {
   savedAssets: AssetRecord[];
   onCreateAsset: () => void;
   onAssetsImported: () => Promise<void>;
   onOpenQrStudio: (asset: AssetRecord) => void;
 }) {
+  // ── keep for import / QR studio ──────────────────────────────────────────
   const assetRows = useMemo(() => {
     const byId = new Map<string, AssetRecord>();
-    demoAssetInventory.forEach((asset) => byId.set(asset.id, asset));
-    savedAssets.forEach((asset) => byId.set(asset.id, asset));
+    demoAssetInventory.forEach((a) => byId.set(a.id, a));
+    savedAssets.forEach((a) => byId.set(a.id, a));
     return Array.from(byId.values()).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   }, [savedAssets]);
 
-  const [selectedAssetId, setSelectedAssetId] = useState(assetRows[0]?.id ?? demoAssetInventory[0].id);
-  const [assetQuery, setAssetQuery] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState("All Categories");
-  const [siteFilter, setSiteFilter] = useState("All Sites");
-  const [statusFilter, setStatusFilter] = useState("All Status");
+  // ── new inventory state ───────────────────────────────────────────────────
+  const [activeTab, setActiveTab]         = useState<InvTab>("SFPs");
+  const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
+  const [selectedUnitId, setSelectedUnitId]   = useState<string | null>(null);
+  const [searchQuery, setSearchQuery]     = useState("");
+  const [extraGroups, setExtraGroups]     = useState<InvGroup[]>([]);
+  const [showAddForm, setShowAddForm]     = useState(false);
+  const [addForm, setAddForm]             = useState({ vendor: "", model: "", spec: "", qty: "" });
   const [importMessage, setImportMessage] = useState("");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const sites = useMemo(() => Array.from(new Set(assetRows.map((asset) => asset.site).filter(Boolean))).sort(), [assetRows]);
+  const INV_TABS: InvTab[] = ["SFPs", "Fiber", "Copper", "Switches", "Servers", "Nodes", "More"];
 
-  const filteredAssets = useMemo(() => {
-    const needle = assetQuery.trim().toLowerCase();
+  const allGroups = useMemo(() => [...inventoryStock, ...extraGroups], [extraGroups]);
+  const tabGroups = useMemo(() => allGroups.filter((g) => g.tab === activeTab), [allGroups, activeTab]);
+  const selectedGroup = tabGroups.find((g) => g.id === selectedGroupId) ?? null;
 
-    return assetRows.filter((asset) => {
-      const searchable = [
-        asset.id,
-        asset.qrCode,
-        asset.assetType,
-        asset.name,
-        asset.serial,
-        asset.status,
-        asset.site,
-        asset.room,
-        asset.rack,
-        asset.ruPosition,
-        asset.ipAddress,
-        asset.macAddress,
-        asset.vlan,
-        asset.switchPort,
-        asset.owner,
-        asset.tags,
-        asset.notes
-      ]
-        .join(" ")
-        .toLowerCase();
-      const matchesQuery = !needle || searchable.includes(needle);
-      const assetCategory = getAssetCategory(asset);
-      const matchesCategory = categoryFilter === "All Categories" || assetCategory === categoryFilter;
-      const matchesSite = siteFilter === "All Sites" || asset.site === siteFilter;
-      const matchesStatus = statusFilter === "All Status" || asset.status === statusFilter;
+  // summary KPIs from inventoryStock
+  const invKpis = useMemo(() => {
+    const total      = allGroups.reduce((s, g) => s + g.qty, 0);
+    const sfps       = allGroups.filter((g) => g.tab === "SFPs").reduce((s, g) => s + g.qty, 0);
+    const fiber      = allGroups.filter((g) => g.tab === "Fiber").reduce((s, g) => s + g.qty, 0);
+    const switches   = allGroups.filter((g) => g.tab === "Switches").reduce((s, g) => s + g.qty, 0);
+    const servers    = allGroups.filter((g) => g.tab === "Servers").reduce((s, g) => s + g.qty, 0);
+    return { total, sfps, fiber, switches, servers };
+  }, [allGroups]);
 
-      return matchesQuery && matchesCategory && matchesSite && matchesStatus;
-    });
-  }, [assetQuery, assetRows, categoryFilter, siteFilter, statusFilter]);
+  // right-panel: units to display (group drill-down filtered by search)
+  const drillUnits = useMemo(() => {
+    if (!selectedGroup?.units) return [];
+    const needle = searchQuery.trim().toLowerCase();
+    if (!needle) return selectedGroup.units;
+    return selectedGroup.units.filter((u) =>
+      [u.id, u.serial, u.name, u.status, u.location, u.rack].join(" ").toLowerCase().includes(needle)
+    );
+  }, [selectedGroup, searchQuery]);
 
-  const selectedAsset = filteredAssets.find((asset) => asset.id === selectedAssetId) ?? filteredAssets[0] ?? assetRows[0] ?? demoAssetInventory[0];
+  // search across ALL units (when no group selected)
+  const searchResults = useMemo(() => {
+    const needle = searchQuery.trim().toLowerCase();
+    if (!needle) return [];
+    const out: Array<{ group: InvGroup; unit: InvUnit }> = [];
+    for (const g of allGroups) {
+      for (const u of g.units ?? []) {
+        if ([u.id, u.serial, u.name, u.status, u.location, u.rack].join(" ").toLowerCase().includes(needle))
+          out.push({ group: g, unit: u });
+      }
+    }
+    return out.slice(0, 30);
+  }, [allGroups, searchQuery]);
 
-  const categoryGroups = useMemo(() => {
-    const visibleCategories = categoryFilter === "All Categories"
-      ? assetCategories
-      : assetCategories.filter((category) => category === categoryFilter);
-
-    return visibleCategories.map((category) => ({
-      category,
-      assets: filteredAssets.filter((asset) => getAssetCategory(asset) === category)
-    }));
-  }, [categoryFilter, filteredAssets]);
-
-  const assetStats = useMemo(() => {
-    const active = filteredAssets.filter((asset) => asset.status === "Active" || asset.status === "In Service").length;
-    const attention = filteredAssets.filter((asset) => asset.status === "Maintenance" || asset.status === "Offline").length;
-    const qrLinked = filteredAssets.filter((asset) => asset.qrCode).length;
-    const racksCount = new Set(filteredAssets.map((asset) => asset.rack).filter(Boolean)).size;
-    const ownersCount = new Set(filteredAssets.map((asset) => asset.owner).filter(Boolean)).size;
-
-    return { active, attention, qrLinked, racksCount, ownersCount };
-  }, [filteredAssets]);
-
-  const attentionAssets = useMemo(() => assetRows.filter((asset) => asset.status === "Maintenance" || asset.status === "Offline" || !asset.qrCode), [assetRows]);
+  const selectedUnit = drillUnits.find((u) => u.id === selectedUnitId) ?? null;
 
   async function importAssetFile(file: File) {
     setImportMessage(`Importing ${file.name}...`);
-
     try {
       const XLSX = await import("xlsx");
       const buffer = await file.arrayBuffer();
       const workbook = XLSX.read(buffer, { type: "array", cellDates: true });
       const firstSheetName = workbook.SheetNames[0];
-
-      if (!firstSheetName) {
-        setImportMessage("No worksheet found in this file.");
-        return;
-      }
-
+      if (!firstSheetName) { setImportMessage("No worksheet found."); return; }
       const sheet = workbook.Sheets[firstSheetName];
-      const rows = XLSX.utils.sheet_to_json<ImportedAssetRow>(sheet, { defval: "", raw: false });
-      const importedAssets = rows
-        .map((row, index) => createAssetFromImportedRow(row, index))
-        .filter((asset): asset is AssetRecord => Boolean(asset));
-
-      if (!importedAssets.length) {
-        setImportMessage("No importable asset rows found. Check the header row.");
-        return;
-      }
-
+      const rows  = XLSX.utils.sheet_to_json<ImportedAssetRow>(sheet, { defval: "", raw: false });
+      const importedAssets = rows.map((row, i) => createAssetFromImportedRow(row, i)).filter((a): a is AssetRecord => Boolean(a));
+      if (!importedAssets.length) { setImportMessage("No importable rows found."); return; }
       const database = await getAssetDatabase();
-      await Promise.all(importedAssets.map((asset) => database.put(asset)));
+      await Promise.all(importedAssets.map((a) => database.put(a)));
       await onAssetsImported();
-      setSelectedAssetId(importedAssets[0].id);
-      setAssetQuery("");
-      setCategoryFilter("All Categories");
-      setImportMessage(`Imported ${importedAssets.length} assets. Each row now has a printable QR.`);
-    } catch {
-      setImportMessage("Import failed. Use .xlsx, .xls, or .csv with a clear header row.");
-    }
+      setImportMessage(`Imported ${importedAssets.length} assets.`);
+    } catch { setImportMessage("Import failed. Use .xlsx, .xls, or .csv."); }
   }
 
   function handleAssetImport(event: ChangeEvent<HTMLInputElement>) {
@@ -3203,186 +3266,242 @@ function AssetsInventoryPage({
     void importAssetFile(file);
   }
 
+  function submitAdd() {
+    if (!addForm.model.trim() || !addForm.qty.trim()) return;
+    const newGroup: InvGroup = {
+      id: `usr-${Date.now()}`,
+      tab: activeTab,
+      vendor: addForm.vendor,
+      model: addForm.model,
+      spec: addForm.spec,
+      tone: "slate",
+      qty: Math.max(1, parseInt(addForm.qty, 10) || 1),
+    };
+    setExtraGroups((prev) => [...prev, newGroup]);
+    setAddForm({ vendor: "", model: "", spec: "", qty: "" });
+    setShowAddForm(false);
+  }
+
   return (
     <section className="assets-page">
       <header className="racks-hero assets-hero">
         <div>
           <p>Inventory</p>
           <h1>Assets</h1>
-          <span>Operational asset registry for devices, racks, panels, power and storage</span>
+          <span>Structured inventory by category — quantities, models, and drill-down to unit level</span>
         </div>
         <div className="racks-actions">
           <button onClick={onCreateAsset} type="button">Add Asset</button>
           <button onClick={() => fileInputRef.current?.click()} type="button">Bulk Import</button>
-          <button type="button">Export CSV</button>
-          <input
-            ref={fileInputRef}
-            accept=".xlsx,.xls,.csv"
-            className="asset-import-input"
-            onChange={handleAssetImport}
-            type="file"
-          />
+          <input ref={fileInputRef} accept=".xlsx,.xls,.csv" className="asset-import-input" onChange={handleAssetImport} type="file" />
         </div>
       </header>
 
       {importMessage && <p className="asset-import-message">{importMessage}</p>}
 
+      {/* ── KPIs ── */}
       <section className="dc-command-strip assets-kpis">
-        <article>
-          <span>Total Assets</span>
-          <strong>{filteredAssets.length}</strong>
-          <small>{assetRows.length} in registry</small>
-        </article>
-        <article>
-          <span>Active / Service</span>
-          <strong>{assetStats.active}</strong>
-          <small>Ready for operations</small>
-        </article>
-        <article className={assetStats.attention ? "warning" : ""}>
-          <span>Needs Attention</span>
-          <strong>{assetStats.attention}</strong>
-          <small>Maintenance, offline, or QR gap</small>
-        </article>
-        <article>
-          <span>QR Linked</span>
-          <strong>{assetStats.qrLinked}</strong>
-          <small>Scannable asset tags</small>
-        </article>
-        <article>
-          <span>Racks / Owners</span>
-          <strong>{assetStats.racksCount} / {assetStats.ownersCount}</strong>
-          <small>Physical coverage</small>
-        </article>
+        <article><span>Total Items</span><strong>{invKpis.total}</strong><small>All categories</small></article>
+        <article><span>SFPs / Optics</span><strong>{invKpis.sfps}</strong><small>Transceivers in stock</small></article>
+        <article><span>Fiber Cables</span><strong>{invKpis.fiber}</strong><small>Patch + trunk runs</small></article>
+        <article><span>Switches</span><strong>{invKpis.switches}</strong><small>Access + core + spine</small></article>
+        <article><span>Servers</span><strong>{invKpis.servers}</strong><small>Compute fleet</small></article>
       </section>
 
-      <section className="rack-toolbar assets-toolbar ops-card">
-        <input value={assetQuery} onChange={(event) => setAssetQuery(event.target.value)} placeholder="Search QR, serial, hostname, rack, IP, MAC..." />
-        <select value={categoryFilter} onChange={(event) => setCategoryFilter(event.target.value)}>
-          <option>All Categories</option>
-          {assetCategories.map((category) => (
-            <option key={category}>{category}</option>
-          ))}
-        </select>
-        <select value={siteFilter} onChange={(event) => setSiteFilter(event.target.value)}>
-          <option>All Sites</option>
-          {sites.map((site) => (
-            <option key={site}>{site}</option>
-          ))}
-        </select>
-        <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
-          <option>All Status</option>
-          <option>Active</option>
-          <option>In Service</option>
-          <option>In Stock</option>
-          <option>Maintenance</option>
-          <option>Offline</option>
-          <option>Retired</option>
-        </select>
-      </section>
+      {/* ── Category tab bar ── */}
+      <div className="asset-tab-bar">
+        {INV_TABS.map((tab) => (
+          <button
+            key={tab}
+            className={`asset-tab-btn ${activeTab === tab ? "active" : ""}`}
+            onClick={() => { setActiveTab(tab); setSelectedGroupId(null); setSelectedUnitId(null); setSearchQuery(""); }}
+            type="button"
+          >
+            {tab}
+            <span>{allGroups.filter((g) => g.tab === tab).reduce((s, g) => s + g.qty, 0)}</span>
+          </button>
+        ))}
+      </div>
 
-      <div className="assets-workspace">
-        <section className="ops-card assets-table-card">
-          <header>
-            <h2>Asset Registry</h2>
-            <button type="button">{filteredAssets.length} records</button>
-          </header>
-          <div className="assets-table">
-            {categoryGroups.map((group) => (
-              <section className="asset-category-section" key={group.category}>
-                <header>
-                  <div>
-                    <h3>{group.category}</h3>
-                    <span>{group.assets.length} records</span>
-                  </div>
-                  <small>{group.category === "GBICs" ? "Optics / transceivers" : group.category === "Cables" ? "Fiber, copper, DAC" : group.category === "Servers" ? "Compute nodes" : "Switches, racks, panels, storage, power"}</small>
-                </header>
+      {/* ── Main workspace: left groups + right detail ── */}
+      <div className="assets-inv-workspace">
 
-                {group.assets.length ? (
-                  <div className="asset-category-list">
-                    {group.assets.map((asset) => (
-                      <button className={selectedAsset.id === asset.id ? "active" : ""} key={asset.id} onClick={() => setSelectedAssetId(asset.id)} type="button">
-                        <span>
-                          <b>{asset.name || asset.id}</b>
-                          <small>{asset.id} / {asset.assetType}</small>
-                        </span>
-                        <span>
-                          <b>{asset.rack || asset.site || "No location"}</b>
-                          <small>{asset.room || asset.ruPosition || asset.owner || "No room"}</small>
-                        </span>
-                        <span>
-                          <b>{asset.connectorType || asset.cableType || asset.ipAddress || "No connector"}</b>
-                          <small>{asset.serial || asset.switchPort || asset.macAddress || "No serial"}</small>
-                        </span>
-                        <AssetStatusBadge status={asset.status} />
-                      </button>
-                    ))}
+        {/* ── LEFT: group cards ── */}
+        <div className="assets-inv-left">
+          <div className="assets-inv-list-header">
+            <strong>{activeTab}</strong>
+            <button className="inv-add-btn" onClick={() => setShowAddForm((v) => !v)} type="button">
+              {showAddForm ? "Cancel" : "+ Add"}
+            </button>
+          </div>
+
+          {showAddForm && (
+            <div className="inv-add-form">
+              <input placeholder="Vendor" value={addForm.vendor} onChange={(e) => setAddForm((f) => ({ ...f, vendor: e.target.value }))} />
+              <input placeholder="Model *" value={addForm.model}  onChange={(e) => setAddForm((f) => ({ ...f, model:  e.target.value }))} />
+              <input placeholder="Spec / details" value={addForm.spec} onChange={(e) => setAddForm((f) => ({ ...f, spec:   e.target.value }))} />
+              <input placeholder="Qty *" type="number" min="1" value={addForm.qty} onChange={(e) => setAddForm((f) => ({ ...f, qty:    e.target.value }))} />
+              <button onClick={submitAdd} type="button">Save</button>
+            </div>
+          )}
+
+          {tabGroups.map((group) => {
+            const isSelected = group.id === selectedGroupId;
+            return (
+              <button
+                key={group.id}
+                className={`inv-group-card tone-${group.tone} ${isSelected ? "active" : ""}`}
+                onClick={() => { setSelectedGroupId(isSelected ? null : group.id); setSelectedUnitId(null); }}
+                type="button"
+              >
+                <div className="inv-group-head">
+                  <span className="inv-group-model">
+                    {group.vendor && <em>{group.vendor}</em>}
+                    <strong>{group.model}</strong>
+                  </span>
+                  <span className="inv-group-qty">{group.qty}</span>
+                </div>
+                <div className="inv-group-spec">{group.spec}</div>
+                {group.units && (
+                  <div className="inv-group-unit-bar">
+                    {group.units.filter((u) => u.status === "Active" || u.status === "In Service").length > 0 && (
+                      <span className="inv-unit-pill active">
+                        {group.units.filter((u) => u.status === "Active" || u.status === "In Service").length} active
+                      </span>
+                    )}
+                    {group.units.filter((u) => u.status === "In Stock").length > 0 && (
+                      <span className="inv-unit-pill stock">
+                        {group.units.filter((u) => u.status === "In Stock").length} in stock
+                      </span>
+                    )}
+                    {group.units.filter((u) => u.status === "Maintenance").length > 0 && (
+                      <span className="inv-unit-pill maint">
+                        {group.units.filter((u) => u.status === "Maintenance").length} maint.
+                      </span>
+                    )}
                   </div>
-                ) : (
-                  <div className="asset-category-empty">No matching records in this category.</div>
                 )}
-              </section>
-            ))}
-          </div>
-        </section>
-
-        <aside className="ops-card asset-detail-panel">
-          <header>
-            <div>
-              <h2>{selectedAsset.name || selectedAsset.id}</h2>
-              <span>{selectedAsset.assetType} / {selectedAsset.id}</span>
-            </div>
-            <AssetStatusBadge status={selectedAsset.status} />
-          </header>
-
-          <div className="asset-identity-card">
-            <div className="asset-qr-mark">QR</div>
-            <div>
-              <strong>{selectedAsset.qrCode || "Missing QR"}</strong>
-              <span>{getQrPayload(selectedAsset)}</span>
-            </div>
-          </div>
-
-          <div className="asset-detail-grid">
-            <span><small>Serial</small><b>{selectedAsset.serial || "Not set"}</b></span>
-            <span><small>Owner</small><b>{selectedAsset.owner || "Unassigned"}</b></span>
-            <span><small>Site</small><b>{selectedAsset.site || "No site"}</b></span>
-            <span><small>Room</small><b>{selectedAsset.room || "No room"}</b></span>
-            <span><small>Rack</small><b>{selectedAsset.rack || "No rack"}</b></span>
-            <span><small>RU Position</small><b>{selectedAsset.ruPosition || "No RU"}</b></span>
-            <span><small>IP Address</small><b>{selectedAsset.ipAddress || "No IP"}</b></span>
-            <span><small>MAC / Port</small><b>{selectedAsset.macAddress || selectedAsset.switchPort || "No mapping"}</b></span>
-            <span><small>VLAN</small><b>{selectedAsset.vlan || "No VLAN"}</b></span>
-            <span><small>Cable / Connector</small><b>{[selectedAsset.cableType, selectedAsset.connectorType].filter(Boolean).join(" / ") || "No link"}</b></span>
-          </div>
-
-          <section className="asset-notes-card">
-            <strong>Operational Notes</strong>
-            <p>{selectedAsset.notes || "No notes captured yet."}</p>
-            <small>Updated {new Date(selectedAsset.updatedAt).toLocaleString()}</small>
-          </section>
-
-          <div className="asset-actions">
-            <button onClick={() => onOpenQrStudio(selectedAsset)} type="button">Open QR Studio</button>
-            <button type="button">Create Work Order</button>
-            <button type="button">Print Label</button>
-          </div>
-
-          <section className="asset-attention-list">
-            <header>
-              <strong>Attention Queue</strong>
-              <span>{attentionAssets.length} items</span>
-            </header>
-            {attentionAssets.slice(0, 5).map((asset) => (
-              <button key={asset.id} onClick={() => setSelectedAssetId(asset.id)} type="button">
-                <span>
-                  <b>{asset.name || asset.id}</b>
-                  <small>{asset.rack || asset.site || "No location"} / {asset.assetType}</small>
-                </span>
-                <em>{asset.status}</em>
               </button>
-            ))}
-          </section>
-        </aside>
+            );
+          })}
+        </div>
+
+        {/* ── RIGHT: drill-down or search ── */}
+        <div className="assets-inv-right ops-card">
+          <div className="inv-right-search">
+            <input
+              placeholder="Search serial, name, rack, location…"
+              value={searchQuery}
+              onChange={(e) => { setSearchQuery(e.target.value); if (e.target.value) setSelectedGroupId(null); }}
+            />
+          </div>
+
+          {/* Search mode */}
+          {searchQuery && !selectedGroupId && (
+            <>
+              <div className="inv-right-header">
+                <strong>Search results</strong>
+                <span>{searchResults.length} found</span>
+              </div>
+              {searchResults.length === 0 && (
+                <p className="inv-empty">No units matched "{searchQuery}"</p>
+              )}
+              {searchResults.map(({ group, unit }) => (
+                <button
+                  key={unit.id}
+                  className={`inv-unit-row ${selectedUnitId === unit.id ? "active" : ""}`}
+                  onClick={() => { setSelectedUnitId(unit.id); setSelectedGroupId(group.id); }}
+                  type="button"
+                >
+                  <span>
+                    <b>{unit.name}</b>
+                    <small>{group.vendor} {group.model}</small>
+                  </span>
+                  <span>
+                    <b>{unit.rack || unit.location}</b>
+                    <small>{unit.serial}</small>
+                  </span>
+                  <em className={`asset-status ${unit.status.toLowerCase().replace(" ", "-")}`}>{unit.status}</em>
+                </button>
+              ))}
+            </>
+          )}
+
+          {/* Group drill-down mode */}
+          {selectedGroup && !searchQuery && (
+            <>
+              <div className="inv-right-header">
+                <div>
+                  <strong>{selectedGroup.vendor} {selectedGroup.model}</strong>
+                  <small>{selectedGroup.spec}</small>
+                </div>
+                <span>{selectedGroup.qty} units</span>
+              </div>
+
+              {selectedGroup.units ? (
+                <div className="inv-unit-list">
+                  {drillUnits.map((unit) => (
+                    <button
+                      key={unit.id}
+                      className={`inv-unit-row ${selectedUnitId === unit.id ? "active" : ""}`}
+                      onClick={() => setSelectedUnitId(selectedUnitId === unit.id ? null : unit.id)}
+                      type="button"
+                    >
+                      <span>
+                        <b>{unit.name}</b>
+                        <small>{unit.id}</small>
+                      </span>
+                      <span>
+                        <b>{unit.rack || "No rack"}</b>
+                        <small>{unit.location}</small>
+                      </span>
+                      <span>
+                        <b>{unit.serial}</b>
+                        <small>Serial</small>
+                      </span>
+                      <em className={`asset-status ${unit.status.toLowerCase().replace(" ", "-")}`}>{unit.status}</em>
+                    </button>
+                  ))}
+                </div>
+              ) : (
+                <div className="inv-qty-breakdown">
+                  <p className="inv-qty-note">No individual unit tracking for this category — quantity only.</p>
+                  <div className="inv-qty-card">
+                    <span>Total qty</span>
+                    <strong>{selectedGroup.qty}</strong>
+                  </div>
+                </div>
+              )}
+
+              {/* Unit detail card */}
+              {selectedUnit && (
+                <div className="inv-unit-detail">
+                  <header>
+                    <div>
+                      <strong>{selectedUnit.name}</strong>
+                      <small>{selectedGroup.vendor} {selectedGroup.model} · {selectedGroup.spec}</small>
+                    </div>
+                    <em className={`asset-status ${selectedUnit.status.toLowerCase().replace(" ", "-")}`}>{selectedUnit.status}</em>
+                  </header>
+                  <div className="inv-unit-detail-grid">
+                    <span><small>ID</small><b>{selectedUnit.id}</b></span>
+                    <span><small>Serial</small><b>{selectedUnit.serial}</b></span>
+                    <span><small>Rack</small><b>{selectedUnit.rack || "—"}</b></span>
+                    <span><small>Location</small><b>{selectedUnit.location}</b></span>
+                  </div>
+                </div>
+              )}
+            </>
+          )}
+
+          {/* Empty state */}
+          {!selectedGroup && !searchQuery && (
+            <div className="inv-empty-state">
+              <strong>Select a group</strong>
+              <p>Click any model card on the left to see its unit list, or search by serial / name above.</p>
+            </div>
+          )}
+        </div>
       </div>
     </section>
   );
