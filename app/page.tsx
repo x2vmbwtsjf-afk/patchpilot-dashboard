@@ -1425,7 +1425,7 @@ export default function DashboardPage() {
       const fallbackAsset = demoAssetInventory.find((asset) => asset.id === id || asset.qrCode === id);
 
       if (!found && !fallbackAsset) {
-        const shouldCreate = window.confirm(`No asset found for ${id}. Create a new asset with this QR/RFID code?`);
+        const shouldCreate = window.confirm(`QR/RFID code ${id} was not found in the database.\n\nAdd it as a new asset?`);
 
         if (shouldCreate) {
           setSelectedAsset(createAssetDraft(id, value.trim()));
@@ -1433,13 +1433,14 @@ export default function DashboardPage() {
           setQuery("");
           setIsSearchOpen(false);
           setIsScannerOpen(false);
-          setActionNotice(`New asset started from scanned code ${id}.`);
+          setActionNotice(`QR/RFID ${id} was not found. Fill the asset details, then Save to DB.`);
           setScanMessage(`Create new asset for ${id}`);
           return;
         }
 
         setIsScannerOpen(false);
         setScanMessage(`No asset found for ${id}.`);
+        setActionNotice(`QR/RFID ${id} was not found and was not added.`);
         return;
       }
 
@@ -2982,7 +2983,7 @@ function QRStudio({
   const [database, setDatabase] = useState<AssetDatabaseApi | null>(null);
   const [search, setSearch] = useState("");
   const [scanValue, setScanValue] = useState("");
-  const [, setMessage] = useState("Database ready");
+  const [message, setMessage] = useState("Database ready");
 
   const qrPayload = useMemo(() => getQrPayload(asset), [asset]);
   const selectedAssetKind = asset.assetType === "Rack" ? "Rack" : asset.assetType.includes("Cable") ? "Cable" : "Server";
@@ -3109,18 +3110,18 @@ function QRStudio({
     const resolvedAsset = found ?? fallbackAsset;
 
     if (!resolvedAsset) {
-      const shouldCreate = window.confirm(`No asset found for ${id}. Create a new asset with this QR/RFID code?`);
+      const shouldCreate = window.confirm(`QR/RFID code ${id} was not found in the database.\n\nAdd it as a new asset?`);
 
       if (shouldCreate) {
         const draft = createAssetDraft(id, scanValue.trim());
         setAsset(draft);
         setSearch("");
         setScanValue("");
-        setMessage(`New asset started from scanned code ${id}`);
+        setMessage(`QR/RFID ${id} was not found. Fill the details, then Save to DB.`);
         return;
       }
 
-      setMessage(`No asset found for ${id}`);
+      setMessage(`QR/RFID ${id} was not found and was not added.`);
       return;
     }
 
@@ -3242,6 +3243,7 @@ function QRStudio({
           </div>
 
           <div className="qr-create-controls">
+            <p className="qr-create-meta">{message}</p>
             <div className="asset-kind-picker" aria-label="Asset type">
               {(["Server", "Rack", "Cable"] as const).map((kind) => (
                 <button className={selectedAssetKind === kind ? "active" : ""} key={kind} onClick={() => selectAssetKind(kind)} type="button">
