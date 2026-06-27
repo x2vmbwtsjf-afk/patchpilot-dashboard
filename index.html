@@ -1,9 +1,12 @@
 <!doctype html>
-<html lang="en">
+<html lang="en" data-theme="dark">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>PatchPilot Dashboard</title>
+    <script>
+      (function(){try{var t=localStorage.getItem('pp_theme');if(t==='light'||t==='dark')document.documentElement.setAttribute('data-theme',t);}catch(e){}})();
+    </script>
   </head>
   <body>
     <div id="root"></div>

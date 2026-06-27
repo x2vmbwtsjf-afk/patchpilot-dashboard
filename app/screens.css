@@ -1339,6 +1339,109 @@
   cursor: pointer;
 }
 
+.int-test-btn.err { border-color: rgba(255,93,102,0.4);  background: rgba(255,93,102,0.1);   color: var(--red); }
+
+.int-disconnect-btn {
+  min-height: 32px;
+  border: 1px solid rgba(255,93,102,0.28);
+  border-radius: 7px;
+  padding: 0 14px;
+  background: rgba(255,93,102,0.07);
+  color: #ffa0a5;
+  font-size: 0.76rem;
+  font-weight: 850;
+  cursor: pointer;
+  margin-left: auto;
+}
+
+/* group filter tabs */
+.int-group-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 14px;
+}
+
+.int-group-tab {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 30px;
+  border: 1px solid rgba(148,163,184,0.18);
+  border-radius: 8px;
+  padding: 0 12px;
+  background: rgba(255,255,255,0.04);
+  color: var(--muted);
+  font-size: 0.73rem;
+  font-weight: 850;
+  cursor: pointer;
+  transition: background 0.13s, border-color 0.13s, color 0.13s;
+}
+.int-group-tab em {
+  color: var(--green);
+  font-style: normal;
+  font-size: 0.55rem;
+  margin-left: 2px;
+}
+.int-group-tab.active {
+  border-color: rgba(34,211,238,0.45);
+  background: rgba(34,211,238,0.1);
+  color: #e8f7ff;
+}
+.int-group-tab:hover:not(.active) {
+  border-color: rgba(148,163,184,0.32);
+  color: #c9d7e8;
+}
+
+/* icon color variants per group */
+.int-icon-identity        { background: rgba(139,92,246,0.14); border-color: rgba(139,92,246,0.35); color: #c4b5fd; }
+.int-icon-service-desk    { background: rgba(249,115,22,0.12); border-color: rgba(249,115,22,0.3);  color: #fdba74; }
+.int-icon-monitoring      { background: rgba(34,211,238,0.11); border-color: rgba(34,211,238,0.3);  color: #9ff3ff; }
+.int-icon-messaging       { background: rgba(61,220,132,0.11); border-color: rgba(61,220,132,0.28); color: #6ee7b7; }
+.int-icon-database        { background: rgba(96,165,250,0.12); border-color: rgba(96,165,250,0.3);  color: #93c5fd; }
+
+/* "enables" tags row */
+.int-enables-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 0 14px 10px;
+}
+.int-enables-tag {
+  border: 1px solid rgba(34,211,238,0.18);
+  border-radius: 999px;
+  padding: 3px 8px;
+  background: rgba(34,211,238,0.06);
+  color: var(--cyan);
+  font-size: 0.63rem;
+  font-weight: 850;
+  letter-spacing: 0.03em;
+}
+
+/* setup guide box */
+.int-next-step-box {
+  display: grid;
+  gap: 5px;
+  margin-bottom: 12px;
+  border: 1px solid rgba(96,165,250,0.2);
+  border-radius: 8px;
+  padding: 10px 12px;
+  background: rgba(96,165,250,0.05);
+}
+.int-next-step-box span {
+  color: var(--blue);
+  font-size: 0.63rem;
+  font-weight: 950;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.int-next-step-box p {
+  margin: 0;
+  color: #b0c8e4;
+  font-size: 0.76rem;
+  line-height: 1.5;
+}
+
 /* ============================================================
    AUDIT LOGS v2 – search, actor filter, expandable rows, pagination
    ============================================================ */
