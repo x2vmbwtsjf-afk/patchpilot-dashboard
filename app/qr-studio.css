@@ -851,6 +851,63 @@
   color: #dffbff;
 }
 
+.fiber-signal-how {
+  margin: 0 14px 10px;
+  border: 1px solid rgba(34, 211, 238, 0.15);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: rgba(34, 211, 238, 0.05);
+}
+
+.fiber-signal-how p {
+  margin: 0;
+  color: #8fa8c0;
+  font-size: 0.71rem;
+  line-height: 1.45;
+}
+
+.fiber-signal-manual {
+  margin: 0 14px 14px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.fiber-signal-manual p {
+  margin: 0 0 8px;
+  color: #9fb4cc;
+  font-size: 0.74rem;
+}
+
+.fiber-signal-manual > div {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.fiber-btn-good {
+  min-height: 38px;
+  border: 1px solid rgba(61, 220, 132, 0.4);
+  border-radius: 8px;
+  background: rgba(61, 220, 132, 0.12);
+  color: var(--green);
+  font-size: 0.8rem;
+  font-weight: 850;
+  cursor: pointer;
+}
+
+.fiber-btn-bad {
+  min-height: 38px;
+  border: 1px solid rgba(255, 93, 102, 0.35);
+  border-radius: 8px;
+  background: rgba(255, 93, 102, 0.1);
+  color: var(--red);
+  font-size: 0.8rem;
+  font-weight: 850;
+  cursor: pointer;
+}
+
 .fiber-signal-note {
   display: grid;
   gap: 4px;

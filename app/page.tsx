@@ -1418,43 +1418,69 @@ function getBarcodeDetectorConstructor() {
 
 function detectFiberSignal(imageData: ImageData): FiberSignalResult | null {
   const { data, width, height } = imageData;
-  const step = 4;
-  let brightPixels = 0;
-  let redPixels = 0;
-  let whitePixels = 0;
-  let maxBrightness = 0;
-  let sampledPixels = 0;
 
-  for (let y = Math.floor(height * 0.12); y < height * 0.88; y += step) {
-    for (let x = Math.floor(width * 0.12); x < width * 0.88; x += step) {
-      const index = (y * width + x) * 4;
-      const red = data[index];
-      const green = data[index + 1];
-      const blue = data[index + 2];
-      const brightness = Math.max(red, green, blue);
-      const spread = Math.max(red, green, blue) - Math.min(red, green, blue);
-      const isRedLaser = red > 185 && red - green > 55 && red - blue > 55;
-      const isWhiteLaser = brightness > 225 && spread < 52;
+  // ── Thresholds tuned for fiber laser physics ──────────────────────────
+  // Red laser (650 nm): clips the red channel near 255, G+B stay low
+  const RED_SAT      = 242;   // red channel must be sensor-saturating
+  const RED_RATIO    = 2.8;   // R / G  and  R / B  must exceed this ratio
+  // White/IR laser: all three channels near saturation, very tight spread
+  const WHITE_SAT    = 242;
+  const WHITE_SPREAD = 14;    // |max − min| of R,G,B — spectrally pure light is tight
+  // ─────────────────────────────────────────────────────────────────────
 
-      sampledPixels += 1;
-      maxBrightness = Math.max(maxBrightness, brightness);
+  // Sample only the central 70 % of the frame — edge areas often contain
+  // room fixtures, windows, and status LEDs that could false-trigger.
+  const xMin = Math.floor(width  * 0.15);
+  const xMax = Math.floor(width  * 0.85);
+  const yMin = Math.floor(height * 0.15);
+  const yMax = Math.floor(height * 0.85);
+  const step = 2;
 
-      if (isRedLaser || isWhiteLaser) {
-        brightPixels += 1;
-        if (isRedLaser) redPixels += 1;
-        if (isWhiteLaser) whitePixels += 1;
+  let redPx   = 0;
+  let whitePx = 0;
+  let total   = 0;
+  let maxR    = 0;
+  let maxBrt  = 0;
+
+  for (let y = yMin; y < yMax; y += step) {
+    for (let x = xMin; x < xMax; x += step) {
+      const i = (y * width + x) * 4;
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+      const brt = Math.max(r, g, b);
+      const spd = brt - Math.min(r, g, b);
+
+      total++;
+      if (r > maxR)   maxR  = r;
+      if (brt > maxBrt) maxBrt = brt;
+
+      // Red laser: sensor-saturating red with extreme channel dominance
+      if (r >= RED_SAT
+          && r / Math.max(g, 1) >= RED_RATIO
+          && r / Math.max(b, 1) >= RED_RATIO) {
+        redPx++;
+      }
+
+      // White laser: all channels near saturation, very tight spectral spread
+      if (r >= WHITE_SAT && g >= WHITE_SAT && b >= WHITE_SAT && spd <= WHITE_SPREAD) {
+        whitePx++;
       }
     }
   }
 
-  const hotRatio = brightPixels / Math.max(sampledPixels, 1);
-  const hasSmallBrightSource = brightPixels >= 5 && hotRatio > 0.00025 && hotRatio < 0.065 && maxBrightness > 225;
+  const hotPx    = redPx + whitePx;
+  const hotRatio = hotPx / Math.max(total, 1);
 
-  if (!hasSmallBrightSource) return null;
+  // Must be a small but definite spot:
+  //  • At least 4 qualifying pixels (rules out noise / cosmic rays)
+  //  • Less than 1.5 % of sampled area (rules out diffuse room light / LEDs)
+  //  • The brightest channel must be truly saturating
+  if (hotPx < 4 || hotRatio > 0.015 || maxBrt < 242) return null;
 
   return {
-    color: redPixels > whitePixels ? "red" : "white",
-    score: Math.min(100, Math.round((brightPixels / Math.max(sampledPixels, 1)) * 5000))
+    color: redPx >= whitePx ? "red" : "white",
+    score: Math.min(100, Math.round(Math.min(hotPx / 0.6, 100)))
   };
 }
 
@@ -3786,14 +3812,18 @@ function FiberSignalModal({
         video.srcObject = stream;
         video.setAttribute("playsinline", "true");
         await video.play();
-        setValidatorStatus("Camera ready. Bring the fiber tip close to the lens.");
+        setValidatorStatus("Camera ready — touch the fiber tip to the camera lens.");
 
         const context = canvas.getContext("2d", { willReadFrequently: true });
 
+        // Sample every 2nd animation frame to reduce CPU pressure on mobile
+        let frameSkip = 0;
+
         const scanFrame = () => {
           if (!isMounted || resolvedRef.current) return;
+          frameSkip++;
 
-          if (context && video.videoWidth && video.videoHeight) {
+          if (context && video.videoWidth && video.videoHeight && frameSkip % 2 === 0) {
             canvas.width = video.videoWidth;
             canvas.height = video.videoHeight;
             context.drawImage(video, 0, 0, canvas.width, canvas.height);
@@ -3803,17 +3833,19 @@ function FiberSignalModal({
 
             if (result) {
               stableHitsRef.current += 1;
-              setSignalHint(`${result.color === "red" ? "Red" : "White"} light candidate / confidence ${result.score}%`);
+              setSignalHint(`${result.color === "red" ? "🔴 Red laser" : "⚪ White laser"} detected — hold steady… (${stableHitsRef.current}/10)`);
 
-              if (stableHitsRef.current >= 4) {
+              // Require 10 consecutive positive frames (≈ 333 ms) to avoid false triggers
+              if (stableHitsRef.current >= 10) {
                 resolvedRef.current = true;
                 stopCamera();
                 onDetected(result);
                 return;
               }
             } else {
-              stableHitsRef.current = Math.max(0, stableHitsRef.current - 1);
-              setSignalHint("No laser signal yet");
+              // Reset counter on miss — requires sustained signal
+              stableHitsRef.current = 0;
+              setSignalHint("No laser signal — room light ignored. Touch fiber tip to lens.");
             }
           }
 
@@ -3841,7 +3873,7 @@ function FiberSignalModal({
           <div>
             <p>Fiber Validation</p>
             <h2>Run Signal Test</h2>
-            <span>Hold the fiber tip close to the phone camera. The test closes automatically when red or white laser light is detected.</span>
+            <span>Touch the fiber tip directly to the camera lens. Room light is ignored — only laser-level saturation triggers detection.</span>
           </div>
           <button onClick={onClose} type="button">Close</button>
         </header>
@@ -3850,10 +3882,7 @@ function FiberSignalModal({
           <video ref={videoRef} muted playsInline />
           <canvas ref={canvasRef} aria-hidden="true" />
           <div className="scanner-frame fiber-signal-frame">
-            <span />
-            <span />
-            <span />
-            <span />
+            <span /><span /><span /><span />
           </div>
         </div>
 
@@ -3862,9 +3891,16 @@ function FiberSignalModal({
           <small>{signalHint}</small>
         </div>
 
-        <div className="fiber-signal-note">
-          <strong>Field note</strong>
-          <span>This is a visual camera check, not calibrated optical power measurement.</span>
+        <div className="fiber-signal-how">
+          <p>How it works: the camera looks for sensor-saturating laser light (R≥242 with R/G ≥ 2.8×, or all channels ≥ 242 for white). Normal room light, LEDs, and phone screens don't reach this level in a small spot.</p>
+        </div>
+
+        <div className="fiber-signal-manual">
+          <p>Can't get auto-detection? Log result manually:</p>
+          <div>
+            <button onClick={() => { onDetected({ color: "red",   score: 80 }); }} type="button" className="fiber-btn-good">Signal Present ✓</button>
+            <button onClick={() => { onDetected({ color: "white", score: 10 }); }} type="button" className="fiber-btn-bad">No Signal ✗</button>
+          </div>
         </div>
       </section>
     </div>
