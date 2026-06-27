@@ -169,6 +169,99 @@
   grid-area: work;
 }
 
+.service-desk-card {
+  overflow: hidden;
+}
+
+.service-desk-copy {
+  display: grid;
+  gap: 4px;
+  padding: 0 14px 10px;
+}
+
+.service-desk-copy strong {
+  color: #eef6ff;
+  font-size: 0.9rem;
+}
+
+.service-desk-copy span {
+  color: #9fb4cc;
+  font-size: 0.75rem;
+  line-height: 1.35;
+}
+
+.service-provider-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  padding: 0 12px 12px;
+}
+
+.service-provider-grid button {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr);
+  grid-template-rows: auto auto auto;
+  gap: 4px 10px;
+  align-items: center;
+  min-height: 92px;
+  border: 1px solid rgba(148, 163, 184, 0.16);
+  border-radius: 10px;
+  padding: 10px;
+  background: rgba(7, 17, 29, 0.58);
+  color: #edf7ff;
+  text-align: left;
+}
+
+.service-provider-grid button:hover {
+  border-color: rgba(34, 211, 238, 0.38);
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.service-provider-grid button > span {
+  grid-row: 1 / 4;
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(125, 211, 252, 0.26);
+  border-radius: 9px;
+  background: rgba(34, 211, 238, 0.1);
+  color: #9ff3ff;
+  font-size: 0.68rem;
+  font-weight: 950;
+}
+
+.service-provider-grid strong,
+.service-provider-grid small,
+.service-provider-grid em {
+  display: block;
+  min-width: 0;
+}
+
+.service-provider-grid strong {
+  overflow: hidden;
+  font-size: 0.86rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.service-provider-grid small {
+  color: #9fb4cc;
+  font-size: 0.68rem;
+  line-height: 1.25;
+}
+
+.service-provider-grid em {
+  justify-self: start;
+  border-radius: 999px;
+  padding: 3px 8px;
+  background: rgba(148, 163, 184, 0.16);
+  color: #cbd5e1;
+  font-size: 0.62rem;
+  font-style: normal;
+  font-weight: 900;
+}
+
 .command-dashboard-grid .quick-actions-card {
   grid-area: quick;
 }
@@ -282,6 +375,10 @@
   .command-dashboard-grid .activity-list,
   .command-dashboard-grid .rack-row {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .service-provider-grid {
+    grid-template-columns: 1fr;
   }
 
   .qr-command-stats {

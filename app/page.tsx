@@ -4,7 +4,6 @@ import jsQR from "jsqr";
 import QRCode from "qrcode";
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 
-type Severity = "Critical" | "High" | "Medium" | "Low";
 type Health = "Healthy" | "Warning" | "Offline" | "Pending" | "Online";
 type Tone = "blue" | "green" | "amber" | "red" | "purple" | "slate";
 
@@ -49,13 +48,11 @@ type Technician = {
   status: Health;
 };
 
-type WorkOrder = {
-  priority: Severity;
-  title: string;
+type ServiceDeskProvider = {
+  name: string;
+  icon: string;
   detail: string;
-  location: string;
-  assignee: string;
-  due: string;
+  status: "Ready" | "Planned";
 };
 
 type Scan = {
@@ -211,7 +208,7 @@ const navItems: NavItem[] = [
   { label: "Command", icon: "H" },
   { label: "QR Studio", icon: "Q" },
   { label: "Assets", icon: "A" },
-  { label: "Work Queue", icon: "W", count: 8 },
+  { label: "Tickets", icon: "SD" },
   { label: "Technicians", icon: "T" },
   { label: "Racks", icon: "R" },
   { label: "Cables", icon: "C" },
@@ -226,7 +223,7 @@ const metrics: Metric[] = [
   { label: "Devices", value: "229", delta: "5 new", icon: "SV" },
   { label: "Racks", value: "42", delta: "82% avg. used", icon: "RK" },
   { label: "Cables", value: "3,782", delta: "28 new", icon: "CB" },
-  { label: "Work Orders", value: "24", delta: "8 in progress", icon: "WO" },
+  { label: "Tickets", value: "Ready", delta: "Jira / ServiceNow prep", icon: "TK" },
   { label: "Technicians", value: "6", delta: "3 on site", icon: "TE" }
 ];
 
@@ -251,7 +248,7 @@ const liveActivity: Activity[] = [
   { title: "QR label printed for 24 assets", time: "3 min ago", icon: "QR", tone: "purple" },
   { title: "Device moved from Rack B12 to C07", time: "5 min ago", icon: "MV", tone: "amber" },
   { title: "Offline sync completed", time: "7 min ago", icon: "SY", tone: "green" },
-  { title: "Technician David started work order #1254", time: "8 min ago", icon: "WO", tone: "blue" },
+  { title: "Technician David linked ticket TK-1254", time: "8 min ago", icon: "TK", tone: "blue" },
   { title: "Signal test failed on Fiber-221", time: "11 min ago", icon: "AL", tone: "red" }
 ];
 
@@ -264,11 +261,10 @@ const technicians: Technician[] = [
   { name: "Chris B.", task: "Site Survey", status: "Offline" }
 ];
 
-const workOrders: WorkOrder[] = [
-  { priority: "High", title: "Rack Audit - DC-A12", detail: "Annual audit and verification", location: "DC-A12", assignee: "David M.", due: "Today" },
-  { priority: "High", title: "Fiber Link Validation", detail: "Check link between leaf and spine", location: "DC-B07", assignee: "Alex R.", due: "Today" },
-  { priority: "Medium", title: "QR Label Missing", detail: "3 assets missing QR labels", location: "DC-C03", assignee: "Sean P.", due: "Tomorrow" },
-  { priority: "Medium", title: "Power Capacity Check", detail: "Verify power draw on rack", location: "DC-A01", assignee: "Mike T.", due: "Tomorrow" }
+const serviceDeskProviders: ServiceDeskProvider[] = [
+  { name: "ServiceNow", icon: "SN", detail: "Incident / task sync placeholder", status: "Ready" },
+  { name: "Jira", icon: "JR", detail: "Issue / JSM request placeholder", status: "Ready" },
+  { name: "Other", icon: "OT", detail: "Webhook or custom API placeholder", status: "Planned" }
 ];
 
 const recentScans: Scan[] = [
@@ -291,7 +287,7 @@ const quickActions: QuickAction[] = [
   { id: "print-labels", title: "Create Label", detail: "Register asset", icon: "DB", tone: "slate" },
   { id: "import-assets", title: "Lookup Registry", detail: "Find by QR data", icon: "LU", tone: "blue" },
   { id: "rack-audit", title: "Start Rack Audit", detail: "Verify by QR", icon: "RA", tone: "amber" },
-  { id: "work-order", title: "Create Work Order", detail: "New work order", icon: "WO", tone: "green" },
+  { id: "work-order", title: "Create Ticket", detail: "Service desk draft", icon: "TK", tone: "green" },
   { id: "fiber-test", title: "Validate Fiber Link", detail: "Run signal test", icon: "FL", tone: "blue" }
 ];
 
@@ -1264,14 +1260,13 @@ async function getAssetDatabase(): Promise<AssetDatabaseApi> {
 
 export default function DashboardPage() {
   const [activeNav, setActiveNav] = useState("Command");
-  const [workFilter, setWorkFilter] = useState("All");
   const [query, setQuery] = useState("");
   const [savedAssets, setSavedAssets] = useState<AssetRecord[]>([]);
   const [selectedAsset, setSelectedAsset] = useState<AssetRecord | null>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [scanMessage, setScanMessage] = useState("Point the camera at a PatchPilot QR label.");
-  const [actionNotice, setActionNotice] = useState("Command is ready: scan assets, create labels, review rack audits, or focus the high-priority queue.");
+  const [actionNotice, setActionNotice] = useState("Command is ready: scan assets, create labels, import spreadsheets, or prepare service desk integrations.");
   const commandImportInputRef = useRef<HTMLInputElement | null>(null);
 
   async function refreshSavedAssets() {
@@ -1287,11 +1282,6 @@ export default function DashboardPage() {
   useEffect(() => {
     void refreshSavedAssets();
   }, []);
-
-  const filteredWorkOrders = useMemo(() => {
-    if (workFilter === "All") return workOrders;
-    return workOrders.filter((order) => order.priority === workFilter);
-  }, [workFilter]);
 
   const visibleActivities = useMemo(() => {
     const normalizedQuery = query.trim().toLowerCase();
@@ -1438,10 +1428,9 @@ export default function DashboardPage() {
         setActionNotice("Label workspace opened. Register the asset, save it to the local DB, then print the QR label.");
         break;
       case "work-order":
-        setActiveNav("Work Queue");
-        setWorkFilter("High");
+        setActiveNav("Tickets");
         setQuery("");
-        setActionNotice("Work queue filtered to high-priority orders.");
+        setActionNotice("Service desk placeholder opened. Connect Jira, ServiceNow, or a custom ticket provider when ready.");
         break;
       case "fiber-test":
         setActiveNav("Command");
@@ -1658,34 +1647,19 @@ export default function DashboardPage() {
                 </div>
               </Card>
 
-              <Card className="work-card-main" title="Work Queue (8)" action="View All">
-                <div className="work-filters">
-                  {["All", "High", "Medium", "Low"].map((filter) => (
-                    <button className={workFilter === filter ? "active" : ""} key={filter} onClick={() => setWorkFilter(filter)} type="button">
-                      {filter}
-                      <span>{filter === "All" ? 8 : filter === "High" ? 3 : filter === "Medium" ? 3 : 2}</span>
-                    </button>
-                  ))}
+              <Card className="work-card-main service-desk-card" title="Service Desk Integrations" action="Configure">
+                <div className="service-desk-copy">
+                  <strong>Ticketing placeholder</strong>
+                  <span>Prepare PatchPilot assets and QR scans to open or link external tickets later.</span>
                 </div>
-                <div className="work-table">
-                  <div className="work-head">
-                    <span>Priority</span>
-                    <span>Title</span>
-                    <span>Location</span>
-                    <span>Assigned To</span>
-                    <span>Due</span>
-                  </div>
-                  {filteredWorkOrders.map((order) => (
-                    <div className="work-row" key={order.title}>
-                      <PriorityPill priority={order.priority} />
-                      <span>
-                        <b>{order.title}</b>
-                        <small>{order.detail}</small>
-                      </span>
-                      <span>{order.location}</span>
-                      <span>{order.assignee}</span>
-                      <em>{order.due}</em>
-                    </div>
+                <div className="service-provider-grid">
+                  {serviceDeskProviders.map((provider) => (
+                    <button key={provider.name} type="button">
+                      <span>{provider.icon}</span>
+                      <strong>{provider.name}</strong>
+                      <small>{provider.detail}</small>
+                      <em>{provider.status === "Ready" ? "Not connected" : "Planned"}</em>
+                    </button>
                   ))}
                 </div>
               </Card>
@@ -3307,8 +3281,4 @@ function InfoRow({ title, detail, time, tone }: { title: string; detail: string;
 
 function StatusPill({ status, label }: { status: Health; label: string }) {
   return <span className={`status-pill ${status.toLowerCase()}`}>{label}</span>;
-}
-
-function PriorityPill({ priority }: { priority: Severity }) {
-  return <span className={`priority-pill ${priority.toLowerCase()}`}>{priority}</span>;
 }
