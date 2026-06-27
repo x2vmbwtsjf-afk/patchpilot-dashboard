@@ -147,7 +147,7 @@ type AssetRecord = {
 
 type AssetCategory = "Cables" | "GBICs" | "Servers" | "Other";
 
-type InvTab = "SFPs" | "Fiber" | "Copper" | "Switches" | "Servers" | "Nodes" | "More";
+type InvTab = "SFPs" | "Fiber" | "Copper" | "Switches" | "Servers" | "Nodes" | "SSD" | "NVMe" | "RAM" | "More";
 type InvUnit = { id: string; serial: string; name: string; status: string; location: string; rack: string };
 type InvGroup = { id: string; tab: InvTab; vendor: string; model: string; spec: string; tone: Tone; qty: number; units?: InvUnit[] };
 
@@ -1446,7 +1446,7 @@ const inventoryStock: InvGroup[] = [
     { id: "SW-AR7800-02", serial: "AR-7800-D01-02", name: "SW-SPINE-02", status: "Active", location: "DC1 / RACK-D01", rack: "RACK-D01" },
   ]},
   // ── Servers ───────────────────────────────────────────────────────────────
-  { id: "srv-01", tab: "Servers", vendor: "HPE",        model: "ProLiant DL380 Gen10", spec: "2×Xeon · 256GB · 2×10G", tone: "blue",   qty: 7, units: [
+  { id: "srv-01", tab: "Servers", vendor: "HPE", model: "ProLiant DL380 Gen10", spec: "2×Xeon Gold 6226R · 256GB · 2×10G", tone: "blue", qty: 7, units: [
     { id: "SRV-DL380-01", serial: "DL380-A12-01", name: "SRV-API-01",  status: "Active",      location: "DC1 / RACK-A12", rack: "RACK-A12" },
     { id: "SRV-DL380-02", serial: "DL380-A12-02", name: "SRV-API-02",  status: "Active",      location: "DC1 / RACK-A12", rack: "RACK-A12" },
     { id: "SRV-DL380-03", serial: "DL380-A12-03", name: "SRV-DB-01",   status: "Active",      location: "DC1 / RACK-A12", rack: "RACK-A12" },
@@ -1455,30 +1455,126 @@ const inventoryStock: InvGroup[] = [
     { id: "SRV-DL380-06", serial: "DL380-B07-06", name: "SRV-APP-02",  status: "Active",      location: "DC1 / RACK-B07", rack: "RACK-B07" },
     { id: "SRV-DL380-07", serial: "DL380-A12-07", name: "SRV-API-07",  status: "Active",      location: "DC1 / RACK-A12", rack: "RACK-A12" },
   ]},
-  { id: "srv-02", tab: "Servers", vendor: "Dell",       model: "PowerEdge R750",       spec: "2×Xeon · 512GB · 2×25G", tone: "cyan",   qty: 5, units: [
+  { id: "srv-02", tab: "Servers", vendor: "HPE", model: "ProLiant DL360 Gen10", spec: "2×Xeon Silver 4214 · 128GB · 2×10G", tone: "blue", qty: 4, units: [
+    { id: "SRV-DL360-01", serial: "DL360-B07-01", name: "SRV-MON-01",  status: "Active",   location: "DC1 / RACK-B07", rack: "RACK-B07" },
+    { id: "SRV-DL360-02", serial: "DL360-B07-02", name: "SRV-MON-02",  status: "Active",   location: "DC1 / RACK-B07", rack: "RACK-B07" },
+    { id: "SRV-DL360-03", serial: "DL360-C03-03", name: "SRV-LOG-01",  status: "Active",   location: "DC1 / RACK-C03", rack: "RACK-C03" },
+    { id: "SRV-DL360-04", serial: "DL360-C03-04", name: "SRV-LOG-02",  status: "In Stock", location: "DC1 / Storage",  rack: "—"        },
+  ]},
+  { id: "srv-03", tab: "Servers", vendor: "Dell", model: "PowerEdge R750", spec: "2×Xeon Gold 6330 · 512GB · 2×25G", tone: "cyan", qty: 5, units: [
     { id: "SRV-R750-01", serial: "R750-C03-01", name: "SRV-WEB-01",   status: "Active",     location: "DC1 / RACK-C03", rack: "RACK-C03" },
     { id: "SRV-R750-02", serial: "R750-C03-02", name: "SRV-WEB-02",   status: "Active",     location: "DC1 / RACK-C03", rack: "RACK-C03" },
     { id: "SRV-R750-03", serial: "R750-C03-03", name: "SRV-WEB-03",   status: "Active",     location: "DC1 / RACK-C03", rack: "RACK-C03" },
     { id: "SRV-R750-04", serial: "R750-D01-04", name: "SRV-CACHE-01", status: "In Service", location: "DC1 / RACK-D01", rack: "RACK-D01" },
     { id: "SRV-R750-05", serial: "R750-D01-05", name: "SRV-CACHE-02", status: "In Service", location: "DC1 / RACK-D01", rack: "RACK-D01" },
   ]},
-  { id: "srv-03", tab: "Servers", vendor: "Supermicro", model: "SYS-420GP-TNR",        spec: "4×GPU · 2×Xeon · 1TB",   tone: "purple", qty: 2, units: [
+  { id: "srv-04", tab: "Servers", vendor: "Dell", model: "PowerEdge R640", spec: "2×Xeon Silver 4210R · 192GB · 2×10G", tone: "cyan", qty: 6, units: [
+    { id: "SRV-R640-01", serial: "R640-A01-01", name: "SRV-MGMT-01", status: "Active",      location: "DC1 / RACK-A01", rack: "RACK-A01" },
+    { id: "SRV-R640-02", serial: "R640-A01-02", name: "SRV-MGMT-02", status: "Active",      location: "DC1 / RACK-A01", rack: "RACK-A01" },
+    { id: "SRV-R640-03", serial: "R640-A02-03", name: "SRV-MGMT-03", status: "Active",      location: "DC1 / RACK-A02", rack: "RACK-A02" },
+    { id: "SRV-R640-04", serial: "R640-A02-04", name: "SRV-MGMT-04", status: "Active",      location: "DC1 / RACK-A02", rack: "RACK-A02" },
+    { id: "SRV-R640-05", serial: "R640-B01-05", name: "SRV-NTP-01",  status: "Active",      location: "DC1 / RACK-B01", rack: "RACK-B01" },
+    { id: "SRV-R640-06", serial: "R640-B01-06", name: "SRV-DNS-01",  status: "Maintenance", location: "DC1 / RACK-B01", rack: "RACK-B01" },
+  ]},
+  { id: "srv-05", tab: "Servers", vendor: "Cisco", model: "UCS C240 M6", spec: "2×Xeon Platinum · 384GB · 4×10G", tone: "amber", qty: 3, units: [
+    { id: "SRV-UCS-01", serial: "UCS-C240-M6-01", name: "SRV-VIRT-01", status: "Active",      location: "DC1 / RACK-D01", rack: "RACK-D01" },
+    { id: "SRV-UCS-02", serial: "UCS-C240-M6-02", name: "SRV-VIRT-02", status: "Active",      location: "DC1 / RACK-D01", rack: "RACK-D01" },
+    { id: "SRV-UCS-03", serial: "UCS-C240-M6-03", name: "SRV-VIRT-03", status: "Maintenance", location: "DC1 / RACK-D01", rack: "RACK-D01" },
+  ]},
+  { id: "srv-06", tab: "Servers", vendor: "Lenovo", model: "ThinkSystem SR650", spec: "2×Xeon Gold 5218 · 256GB · 2×25G", tone: "slate", qty: 2, units: [
+    { id: "SRV-SR650-01", serial: "SR650-B02-01", name: "SRV-BCK-01", status: "Active",   location: "DC1 / RACK-B02", rack: "RACK-B02" },
+    { id: "SRV-SR650-02", serial: "SR650-B02-02", name: "SRV-BCK-02", status: "In Stock", location: "DC1 / Storage",  rack: "—"        },
+  ]},
+  { id: "srv-07", tab: "Servers", vendor: "HPE", model: "ProLiant DL580 Gen10", spec: "4×Xeon Platinum · 1.5TB · 4×25G", tone: "purple", qty: 1, units: [
+    { id: "SRV-DL580-01", serial: "DL580-C01-01", name: "SRV-SAP-01", status: "Active", location: "DC1 / RACK-C01", rack: "RACK-C01" },
+  ]},
+  { id: "srv-08", tab: "Servers", vendor: "Supermicro", model: "SYS-420GP-TNR", spec: "4×A30 GPU · 2×Xeon · 1TB NVMe", tone: "purple", qty: 2, units: [
     { id: "SRV-GPU-01", serial: "SMCI-420GP-01", name: "GPU-TRAIN-01", status: "Active",      location: "DC1 / RACK-C03", rack: "RACK-C03" },
     { id: "SRV-GPU-02", serial: "SMCI-420GP-02", name: "GPU-TRAIN-02", status: "Maintenance", location: "DC1 / RACK-C03", rack: "RACK-C03" },
   ]},
+  { id: "srv-09", tab: "Servers", vendor: "Dell", model: "PowerEdge R940", spec: "4×Xeon Platinum · 1.5TB · 4×25G · NVMe", tone: "green", qty: 2, units: [
+    { id: "SRV-R940-01", serial: "R940-D02-01", name: "SRV-DB-CORE-01", status: "Active", location: "DC1 / RACK-D02", rack: "RACK-D02" },
+    { id: "SRV-R940-02", serial: "R940-D02-02", name: "SRV-DB-CORE-02", status: "Active", location: "DC1 / RACK-D02", rack: "RACK-D02" },
+  ]},
+  { id: "srv-10", tab: "Servers", vendor: "HPE", model: "Synergy 480 Gen10", spec: "Blade · 2×Xeon · 192GB · FlexFabric", tone: "amber", qty: 8, units: [
+    { id: "SRV-SY480-01", serial: "SY480-E01-01", name: "SRV-BLADE-01", status: "Active",      location: "DC1 / ENCL-E01", rack: "RACK-E01" },
+    { id: "SRV-SY480-02", serial: "SY480-E01-02", name: "SRV-BLADE-02", status: "Active",      location: "DC1 / ENCL-E01", rack: "RACK-E01" },
+    { id: "SRV-SY480-03", serial: "SY480-E01-03", name: "SRV-BLADE-03", status: "Active",      location: "DC1 / ENCL-E01", rack: "RACK-E01" },
+    { id: "SRV-SY480-04", serial: "SY480-E01-04", name: "SRV-BLADE-04", status: "Active",      location: "DC1 / ENCL-E01", rack: "RACK-E01" },
+    { id: "SRV-SY480-05", serial: "SY480-E01-05", name: "SRV-BLADE-05", status: "In Service",  location: "DC1 / ENCL-E01", rack: "RACK-E01" },
+    { id: "SRV-SY480-06", serial: "SY480-E01-06", name: "SRV-BLADE-06", status: "Active",      location: "DC1 / ENCL-E01", rack: "RACK-E01" },
+    { id: "SRV-SY480-07", serial: "SY480-E01-07", name: "SRV-BLADE-07", status: "Active",      location: "DC1 / ENCL-E01", rack: "RACK-E01" },
+    { id: "SRV-SY480-08", serial: "SY480-E01-08", name: "SRV-BLADE-08", status: "Maintenance", location: "DC1 / ENCL-E01", rack: "RACK-E01" },
+  ]},
   // ── Nodes ─────────────────────────────────────────────────────────────────
-  { id: "nod-01", tab: "Nodes", vendor: "Dell",        model: "PowerEdge R750xa",    spec: "4×A100 GPU · 2TB NVMe",    tone: "purple", qty: 3, units: [
+  { id: "nod-01", tab: "Nodes", vendor: "Dell", model: "PowerEdge R750xa", spec: "4×A100 SXM · 2TB NVMe · 200G HDR", tone: "purple", qty: 3, units: [
     { id: "NOD-R750XA-01", serial: "R750XA-C03-01", name: "GPU-NODE-01", status: "Active",     location: "DC1 / RACK-C03", rack: "RACK-C03" },
     { id: "NOD-R750XA-02", serial: "R750XA-C03-02", name: "GPU-NODE-02", status: "Active",     location: "DC1 / RACK-C03", rack: "RACK-C03" },
     { id: "NOD-R750XA-03", serial: "R750XA-C03-03", name: "GPU-NODE-03", status: "In Service", location: "DC1 / RACK-C03", rack: "RACK-C03" },
   ]},
-  { id: "nod-02", tab: "Nodes", vendor: "Nvidia",      model: "DGX A100",            spec: "8×A100 · NVLink · 1TB",    tone: "green",  qty: 1, units: [
+  { id: "nod-02", tab: "Nodes", vendor: "Nvidia", model: "DGX A100", spec: "8×A100 80GB · NVLink 3.0 · 1TB NVMe", tone: "green", qty: 1, units: [
     { id: "NOD-DGX-01", serial: "DGX-A100-D01-01", name: "DGX-PROD-01", status: "Active", location: "DC1 / RACK-D01", rack: "RACK-D01" },
   ]},
-  { id: "nod-03", tab: "Nodes", vendor: "Supermicro",  model: "SYS-221GE-TNHR",      spec: "2×A100 · 8×NVMe · 25G",   tone: "blue",   qty: 2, units: [
+  { id: "nod-03", tab: "Nodes", vendor: "Supermicro", model: "SYS-221GE-TNHR", spec: "2×A100 PCIe · 8×NVMe · 2×25G", tone: "blue", qty: 2, units: [
     { id: "NOD-221GE-01", serial: "SMCI-221GE-01", name: "GPU-INF-01", status: "Active", location: "DC1 / RACK-D01", rack: "RACK-D01" },
     { id: "NOD-221GE-02", serial: "SMCI-221GE-02", name: "GPU-INF-02", status: "Active", location: "DC1 / RACK-D01", rack: "RACK-D01" },
   ]},
+  { id: "nod-04", tab: "Nodes", vendor: "Nvidia", model: "DGX H100", spec: "8×H100 SXM · NVLink 4.0 · 3.84TB NVMe", tone: "purple", qty: 1, units: [
+    { id: "NOD-DGX-H100-01", serial: "DGX-H100-D02-01", name: "DGX-H100-01", status: "Active", location: "DC1 / RACK-D02", rack: "RACK-D02" },
+  ]},
+  { id: "nod-05", tab: "Nodes", vendor: "HPE", model: "ProLiant DL385 Gen10+", spec: "2×AMD EPYC 7713 · 512GB · 4×100G", tone: "cyan", qty: 4, units: [
+    { id: "NOD-DL385-01", serial: "DL385-E02-01", name: "HPC-NODE-01", status: "Active",   location: "DC1 / RACK-E02", rack: "RACK-E02" },
+    { id: "NOD-DL385-02", serial: "DL385-E02-02", name: "HPC-NODE-02", status: "Active",   location: "DC1 / RACK-E02", rack: "RACK-E02" },
+    { id: "NOD-DL385-03", serial: "DL385-E02-03", name: "HPC-NODE-03", status: "Active",   location: "DC1 / RACK-E02", rack: "RACK-E02" },
+    { id: "NOD-DL385-04", serial: "DL385-E02-04", name: "HPC-NODE-04", status: "In Stock", location: "DC1 / Storage",  rack: "—"        },
+  ]},
+  { id: "nod-06", tab: "Nodes", vendor: "Nutanix", model: "NX-3155G-G8", spec: "HCI · 2×Xeon · 768GB · 4×NVMe · 2×25G", tone: "amber", qty: 4, units: [
+    { id: "NOD-NX-01", serial: "NX-3155-E03-01", name: "HCI-NODE-01", status: "Active", location: "DC1 / RACK-E03", rack: "RACK-E03" },
+    { id: "NOD-NX-02", serial: "NX-3155-E03-02", name: "HCI-NODE-02", status: "Active", location: "DC1 / RACK-E03", rack: "RACK-E03" },
+    { id: "NOD-NX-03", serial: "NX-3155-E03-03", name: "HCI-NODE-03", status: "Active", location: "DC1 / RACK-E03", rack: "RACK-E03" },
+    { id: "NOD-NX-04", serial: "NX-3155-E03-04", name: "HCI-NODE-04", status: "Active", location: "DC1 / RACK-E03", rack: "RACK-E03" },
+  ]},
+  { id: "nod-07", tab: "Nodes", vendor: "Dell", model: "PowerEdge XE9680", spec: "8×H100 NVL · NVSwitch · 8×200G · 32TB NVMe", tone: "red", qty: 2, units: [
+    { id: "NOD-XE9680-01", serial: "XE9680-F01-01", name: "AI-CLUSTER-01", status: "Active",   location: "DC1 / RACK-F01", rack: "RACK-F01" },
+    { id: "NOD-XE9680-02", serial: "XE9680-F01-02", name: "AI-CLUSTER-02", status: "In Stock", location: "DC1 / Storage",  rack: "—"        },
+  ]},
+  // ── SSD ───────────────────────────────────────────────────────────────────
+  { id: "ssd-01", tab: "SSD", vendor: "Samsung",    model: "PM893 960GB",       spec: "SATA 6G · 2.5\" · 550/530 MB/s",    tone: "blue",   qty: 24 },
+  { id: "ssd-02", tab: "SSD", vendor: "Samsung",    model: "PM893 1.92TB",      spec: "SATA 6G · 2.5\" · 550/530 MB/s",    tone: "blue",   qty: 16 },
+  { id: "ssd-03", tab: "SSD", vendor: "Samsung",    model: "PM893 3.84TB",      spec: "SATA 6G · 2.5\" · 550/530 MB/s",    tone: "blue",   qty: 8  },
+  { id: "ssd-04", tab: "SSD", vendor: "Micron",     model: "5400 Pro 960GB",    spec: "SATA 6G · 2.5\" · 540/520 MB/s",    tone: "cyan",   qty: 20 },
+  { id: "ssd-05", tab: "SSD", vendor: "Micron",     model: "5400 Pro 1.92TB",   spec: "SATA 6G · 2.5\" · 540/520 MB/s",    tone: "cyan",   qty: 12 },
+  { id: "ssd-06", tab: "SSD", vendor: "Intel",      model: "S4520 480GB",       spec: "SATA 6G · 2.5\" · 550/510 MB/s",    tone: "amber",  qty: 30 },
+  { id: "ssd-07", tab: "SSD", vendor: "Intel",      model: "S4520 960GB",       spec: "SATA 6G · 2.5\" · 550/510 MB/s",    tone: "amber",  qty: 18 },
+  { id: "ssd-08", tab: "SSD", vendor: "Seagate",    model: "Nytro 1551 480GB",  spec: "SATA 6G · M.2 2280 · 560/515 MB/s", tone: "slate",  qty: 10 },
+  { id: "ssd-09", tab: "SSD", vendor: "Kingston",   model: "DC600M 480GB",      spec: "SATA 6G · 2.5\" · 560/530 MB/s",    tone: "red",    qty: 15 },
+  { id: "ssd-10", tab: "SSD", vendor: "WD",         model: "Green 240GB",       spec: "SATA · 2.5\" · spare/boot drives",   tone: "green",  qty: 40 },
+
+  // ── NVMe ──────────────────────────────────────────────────────────────────
+  { id: "nvm-01", tab: "NVMe", vendor: "Samsung",   model: "PM9A3 960GB",       spec: "PCIe 4.0 · U.2 · 6.5/2.0 GB/s",     tone: "blue",   qty: 12 },
+  { id: "nvm-02", tab: "NVMe", vendor: "Samsung",   model: "PM9A3 1.92TB",      spec: "PCIe 4.0 · U.2 · 6.5/2.0 GB/s",     tone: "blue",   qty: 8  },
+  { id: "nvm-03", tab: "NVMe", vendor: "Samsung",   model: "PM9A3 3.84TB",      spec: "PCIe 4.0 · U.2 · 6.5/2.0 GB/s",     tone: "blue",   qty: 4  },
+  { id: "nvm-04", tab: "NVMe", vendor: "Micron",    model: "7450 Pro 1.92TB",   spec: "PCIe 4.0 · U.2 · 6.8/2.7 GB/s",     tone: "cyan",   qty: 10 },
+  { id: "nvm-05", tab: "NVMe", vendor: "Micron",    model: "7450 Max 3.2TB",    spec: "PCIe 4.0 · U.2 · 6.8/4.0 GB/s",     tone: "cyan",   qty: 6  },
+  { id: "nvm-06", tab: "NVMe", vendor: "Intel",     model: "P5510 1.92TB",      spec: "PCIe 4.0 · U.2 · 7.0/3.2 GB/s",     tone: "amber",  qty: 8  },
+  { id: "nvm-07", tab: "NVMe", vendor: "Kioxia",    model: "CM6-V 3.2TB",       spec: "PCIe 4.0 · U.2 · 6.2/3.4 GB/s",     tone: "purple", qty: 4  },
+  { id: "nvm-08", tab: "NVMe", vendor: "WD",        model: "Ultrastar DC SN640 1.92TB", spec: "PCIe 3.1 · U.2 · 3.4/1.5 GB/s", tone: "green", qty: 6 },
+  { id: "nvm-09", tab: "NVMe", vendor: "Samsung",   model: "PM983 M.2 960GB",   spec: "PCIe 3.0 · M.2 22110 · 3.0/1.4 GB/s", tone: "slate", qty: 14 },
+  { id: "nvm-10", tab: "NVMe", vendor: "Seagate",   model: "Nytro 4350 HH-HL 7.68TB", spec: "PCIe 4.0 · HHHL · 12.0/4.5 GB/s", tone: "red", qty: 2 },
+
+  // ── RAM ───────────────────────────────────────────────────────────────────
+  { id: "ram-01", tab: "RAM", vendor: "Samsung",    model: "M393A4K40EB3 32GB",  spec: "DDR4-3200 · ECC RDIMM · PC4-25600", tone: "blue",   qty: 96  },
+  { id: "ram-02", tab: "RAM", vendor: "Samsung",    model: "M393A8G40AB2 64GB",  spec: "DDR4-3200 · ECC RDIMM · PC4-25600", tone: "blue",   qty: 48  },
+  { id: "ram-03", tab: "RAM", vendor: "Samsung",    model: "M321R8GA0BB0 64GB",  spec: "DDR5-4800 · ECC RDIMM · PC5-38400", tone: "purple", qty: 32  },
+  { id: "ram-04", tab: "RAM", vendor: "Micron",     model: "MTA36ASF4G72PZ 32GB", spec: "DDR4-3200 · ECC RDIMM · PC4-25600", tone: "cyan",  qty: 64  },
+  { id: "ram-05", tab: "RAM", vendor: "Micron",     model: "MTC40F2046S1RC48 64GB", spec: "DDR5-4800 · ECC RDIMM · PC5-38400", tone: "cyan", qty: 24  },
+  { id: "ram-06", tab: "RAM", vendor: "SK Hynix",   model: "HMAA4GR7AJR8N 32GB", spec: "DDR4-3200 · ECC RDIMM · PC4-25600", tone: "green",  qty: 80  },
+  { id: "ram-07", tab: "RAM", vendor: "SK Hynix",   model: "HMCG78MEBRA107N 64GB", spec: "DDR5-4800 · ECC RDIMM · PC5-38400", tone: "green", qty: 16  },
+  { id: "ram-08", tab: "RAM", vendor: "Kingston",   model: "KSM32RD4/32MEI 32GB", spec: "DDR4-3200 · ECC RDIMM · CL22",      tone: "red",    qty: 40  },
+  { id: "ram-09", tab: "RAM", vendor: "Samsung",    model: "M386A8K40CM2 64GB",  spec: "DDR4-2933 · ECC LRDIMM · PC4-23400", tone: "amber",  qty: 20  },
+  { id: "ram-10", tab: "RAM", vendor: "Micron",     model: "MTA72ASS8G72LZ 64GB", spec: "DDR4-2933 · ECC LRDIMM · PC4-23400", tone: "amber", qty: 12  },
+  { id: "ram-11", tab: "RAM", vendor: "Samsung",    model: "M321RAGA0B20 128GB", spec: "DDR5-4800 · ECC RDIMM · PC5-38400",  tone: "purple", qty: 8   },
+
   // ── More ──────────────────────────────────────────────────────────────────
   { id: "mor-01", tab: "More", vendor: "APC",       model: "UPS SRT6KRMXLI",   spec: "6kVA · 4U rackmount",    tone: "amber", qty: 4  },
   { id: "mor-02", tab: "More", vendor: "Panduit",   model: "Patch Panel 48P",  spec: "1U · Cat6A · angled",    tone: "slate", qty: 12 },
@@ -3588,7 +3684,7 @@ function AssetsInventoryPage({
   const [importMessage, setImportMessage] = useState("");
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const INV_TABS: InvTab[] = ["SFPs", "Fiber", "Copper", "Switches", "Servers", "Nodes", "More"];
+  const INV_TABS: InvTab[] = ["SFPs", "Fiber", "Copper", "Switches", "Servers", "Nodes", "SSD", "NVMe", "RAM", "More"];
 
   const allGroups = useMemo(() => [...inventoryStock, ...extraGroups], [extraGroups]);
   const tabGroups = useMemo(() => allGroups.filter((g) => g.tab === activeTab), [allGroups, activeTab]);
