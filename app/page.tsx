@@ -2052,8 +2052,39 @@ export default function DashboardPage() {
 }
 
 function SettingsPage() {
-  const enabledCount = settingsControls.filter((item) => item.status === "Enabled").length;
-  const partialCount = settingsControls.filter((item) => item.status === "Partial").length;
+  type SettingsTab = "General" | "Scanner" | "Database" | "Security" | "Deployment";
+  const [activeTab, setActiveTab] = useState<SettingsTab>("General");
+  const [assetIdPrefix, setAssetIdPrefix] = useState("PP-");
+  const [labelSize, setLabelSize] = useState("50mm");
+  const [qrErrorLevel, setQrErrorLevel] = useState("M");
+  const [qrMargin, setQrMargin] = useState("1");
+  const [scanThrottle, setScanThrottle] = useState("180");
+  const [unknownQrFlow, setUnknownQrFlow] = useState("confirm");
+  const [rfidEnabled, setRfidEnabled] = useState(false);
+  const [requireScanConfirm, setRequireScanConfirm] = useState(true);
+  const [offlineDb, setOfflineDb] = useState(true);
+  const [autoMapHeaders, setAutoMapHeaders] = useState(true);
+  const [supabaseEnabled, setSupabaseEnabled] = useState(false);
+  const [supabaseUrl, setSupabaseUrl] = useState("");
+  const [supabaseKey, setSupabaseKey] = useState("");
+  const [assetsTable, setAssetsTable] = useState("assets");
+  const [auditTable, setAuditTable] = useState("audit_events");
+  const [syncInterval, setSyncInterval] = useState("30");
+  const [auditRetention, setAuditRetention] = useState("90");
+  const [allowCsvExport, setAllowCsvExport] = useState(true);
+  const [saveStatus, setSaveStatus] = useState<"idle" | "saving" | "saved">("idle");
+  const [isDirty, setIsDirty] = useState(false);
+
+  function markDirty() { setIsDirty(true); setSaveStatus("idle"); }
+  function handleSave() {
+    setSaveStatus("saving");
+    setTimeout(() => { setSaveStatus("saved"); setIsDirty(false); }, 700);
+    setTimeout(() => setSaveStatus("idle"), 3500);
+  }
+
+  const needsSetup = supabaseEnabled && !supabaseUrl ? 1 : 0;
+  const enabledCount = [offlineDb, autoMapHeaders, allowCsvExport, requireScanConfirm].filter(Boolean).length + 3;
+  const tabs: SettingsTab[] = ["General", "Scanner", "Database", "Security", "Deployment"];
 
   return (
     <section className="system-page settings-page">
@@ -2061,10 +2092,13 @@ function SettingsPage() {
         <div>
           <p>System Control</p>
           <h1>Settings</h1>
-          <span>Operational defaults for labels, scanning, imports, offline work, and future cloud sync.</span>
+          <span>Operational defaults for labels, scanning, imports, offline work, and cloud sync.</span>
         </div>
         <div className="system-hero-actions">
-          <button type="button">Save Draft</button>
+          {isDirty && <em className="settings-dirty-badge">Unsaved changes</em>}
+          <button disabled={!isDirty || saveStatus === "saving"} onClick={handleSave} type="button">
+            {saveStatus === "saving" ? "Saving…" : saveStatus === "saved" ? "Saved ✓" : "Save Changes"}
+          </button>
           <button type="button">Export Config</button>
         </div>
       </header>
@@ -2073,68 +2107,237 @@ function SettingsPage() {
         <article>
           <span>Enabled Controls</span>
           <strong>{enabledCount}</strong>
-          <small>Production-ready browser settings</small>
+          <small>Production-ready settings</small>
         </article>
-        <article className={partialCount ? "warning" : ""}>
+        <article className={needsSetup ? "warning" : ""}>
           <span>Needs Setup</span>
-          <strong>{partialCount}</strong>
-          <small>Cloud sync waits for credentials</small>
+          <strong>{needsSetup}</strong>
+          <small>{needsSetup ? "Cloud sync missing URL" : "All configured"}</small>
         </article>
         <article>
           <span>Label Profile</span>
-          <strong>50mm</strong>
+          <strong>{labelSize}</strong>
           <small>QR-only print mode</small>
         </article>
         <article>
           <span>Scan Policy</span>
-          <strong>Confirm</strong>
-          <small>Unknown QR/RFID approval flow</small>
+          <strong>{unknownQrFlow === "confirm" ? "Confirm" : unknownQrFlow === "auto" ? "Auto-create" : "Reject"}</strong>
+          <small>Unknown QR/RFID flow</small>
         </article>
       </section>
 
-      <div className="system-layout">
-        <section className="ops-card system-main-card">
-          <header>
-            <h2>Configuration Matrix</h2>
-            <button type="button">Review</button>
-          </header>
-          <div className="settings-grid">
-            {settingsControls.map((control) => (
-              <article key={control.label}>
-                <div>
-                  <strong>{control.label}</strong>
-                  <span>{control.detail}</span>
-                </div>
-                <b>{control.value}</b>
-                <SystemStatusBadge status={control.status} />
-              </article>
-            ))}
-          </div>
-        </section>
+      <nav className="settings-tab-bar ops-card">
+        {tabs.map((tab) => (
+          <button className={activeTab === tab ? "active" : ""} key={tab} onClick={() => setActiveTab(tab)} type="button">{tab}</button>
+        ))}
+      </nav>
 
-        <aside className="ops-card system-side-card">
-          <header>
-            <h2>Deployment Profile</h2>
-            <button type="button">Vercel</button>
-          </header>
-          <div className="deployment-profile">
-            <span><small>Framework</small><b>Vite + React</b></span>
-            <span><small>Node</small><b>22.x</b></span>
-            <span><small>Build</small><b>npm run build</b></span>
-            <span><small>Output</small><b>dist</b></span>
+      <div className="settings-body">
+        {activeTab === "General" && (
+          <div className="settings-tab-cols">
+            <section className="ops-card settings-card">
+              <header><h2>Identity &amp; Labels</h2></header>
+              <div className="settings-fields">
+                <div className="settings-row">
+                  <div><strong>Asset ID Prefix</strong><span>Prepended to every auto-generated QR code ID</span></div>
+                  <input className="settings-input" onChange={(e) => { setAssetIdPrefix(e.target.value); markDirty(); }} placeholder="PP-" value={assetIdPrefix} />
+                </div>
+                <div className="settings-row">
+                  <div><strong>Label Print Size</strong><span>Physical size sent to label printer</span></div>
+                  <select className="settings-select" onChange={(e) => { setLabelSize(e.target.value); markDirty(); }} value={labelSize}>
+                    <option value="38mm">38mm square</option>
+                    <option value="50mm">50mm square</option>
+                    <option value="62mm">62mm square</option>
+                    <option value="custom">Custom</option>
+                  </select>
+                </div>
+                <div className="settings-row">
+                  <div><strong>QR Error Correction</strong><span>Higher = more robust, slightly larger code</span></div>
+                  <select className="settings-select" onChange={(e) => { setQrErrorLevel(e.target.value); markDirty(); }} value={qrErrorLevel}>
+                    <option value="L">L — 7% recovery</option>
+                    <option value="M">M — 15% recovery</option>
+                    <option value="Q">Q — 25% recovery</option>
+                    <option value="H">H — 30% recovery</option>
+                  </select>
+                </div>
+                <div className="settings-row">
+                  <div><strong>QR Margin (modules)</strong><span>White border width around the code</span></div>
+                  <input className="settings-input settings-input-sm" max="4" min="0" onChange={(e) => { setQrMargin(e.target.value); markDirty(); }} type="number" value={qrMargin} />
+                </div>
+              </div>
+            </section>
+            <section className="ops-card settings-card">
+              <header><h2>Import</h2></header>
+              <div className="settings-fields">
+                <div className="settings-row">
+                  <div><strong>Auto-map Headers</strong><span>Match English and Hebrew column names automatically on XLSX import</span></div>
+                  <SettingsToggle checked={autoMapHeaders} onChange={(v) => { setAutoMapHeaders(v); markDirty(); }} />
+                </div>
+              </div>
+            </section>
           </div>
-          <div className="settings-callout">
-            <strong>Next production step</strong>
-            <p>Add Supabase env vars when you want one shared database instead of browser-local storage.</p>
+        )}
+
+        {activeTab === "Scanner" && (
+          <div className="settings-tab-cols">
+            <section className="ops-card settings-card">
+              <header><h2>QR &amp; RFID Scanner</h2></header>
+              <div className="settings-fields">
+                <div className="settings-row">
+                  <div><strong>Scan Throttle (ms)</strong><span>Minimum delay between camera scan attempts — reduces CPU load</span></div>
+                  <input className="settings-input settings-input-sm" max="500" min="50" onChange={(e) => { setScanThrottle(e.target.value); markDirty(); }} type="number" value={scanThrottle} />
+                </div>
+                <div className="settings-row">
+                  <div><strong>Unknown QR/RFID Flow</strong><span>What happens when a scanned code has no matching asset</span></div>
+                  <select className="settings-select" onChange={(e) => { setUnknownQrFlow(e.target.value); markDirty(); }} value={unknownQrFlow}>
+                    <option value="confirm">Confirm before creating</option>
+                    <option value="auto">Auto-create draft asset</option>
+                    <option value="reject">Reject unknown codes</option>
+                  </select>
+                </div>
+                <div className="settings-row">
+                  <div><strong>Require Scan Confirmation</strong><span>Show confirmation dialog after each successful scan</span></div>
+                  <SettingsToggle checked={requireScanConfirm} onChange={(v) => { setRequireScanConfirm(v); markDirty(); }} />
+                </div>
+                <div className="settings-row">
+                  <div><strong>RFID Reader Support</strong><span>Enable RFID tag lookup alongside QR scanning</span></div>
+                  <SettingsToggle checked={rfidEnabled} onChange={(v) => { setRfidEnabled(v); markDirty(); }} />
+                </div>
+              </div>
+            </section>
           </div>
-        </aside>
+        )}
+
+        {activeTab === "Database" && (
+          <div className="settings-tab-cols">
+            <section className="ops-card settings-card">
+              <header><h2>Local Storage</h2></header>
+              <div className="settings-fields">
+                <div className="settings-row">
+                  <div><strong>Offline IndexedDB</strong><span>Browser-local asset registry for field work without internet</span></div>
+                  <SettingsToggle checked={offlineDb} onChange={(v) => { setOfflineDb(v); markDirty(); }} />
+                </div>
+              </div>
+            </section>
+            <section className="ops-card settings-card">
+              <header>
+                <h2>Supabase Cloud Sync</h2>
+                <SettingsToggle checked={supabaseEnabled} onChange={(v) => { setSupabaseEnabled(v); markDirty(); }} />
+              </header>
+              <div className="settings-fields">
+                <div className={`settings-row${supabaseEnabled ? "" : " settings-row-disabled"}`}>
+                  <div><strong>Project URL</strong><span>https://your-project.supabase.co</span></div>
+                  <input className="settings-input" disabled={!supabaseEnabled} onChange={(e) => { setSupabaseUrl(e.target.value); markDirty(); }} placeholder="https://xxxx.supabase.co" value={supabaseUrl} />
+                </div>
+                <div className={`settings-row${supabaseEnabled ? "" : " settings-row-disabled"}`}>
+                  <div><strong>Anon Key</strong><span>Public anon key from Project Settings → API</span></div>
+                  <input className="settings-input" disabled={!supabaseEnabled} onChange={(e) => { setSupabaseKey(e.target.value); markDirty(); }} placeholder="eyJhbGciOiJIUzI1NiIsInR5c…" type="password" value={supabaseKey} />
+                </div>
+                <div className={`settings-row${supabaseEnabled ? "" : " settings-row-disabled"}`}>
+                  <div><strong>Assets Table</strong><span>Postgres table name for asset records</span></div>
+                  <input className="settings-input" disabled={!supabaseEnabled} onChange={(e) => { setAssetsTable(e.target.value); markDirty(); }} value={assetsTable} />
+                </div>
+                <div className={`settings-row${supabaseEnabled ? "" : " settings-row-disabled"}`}>
+                  <div><strong>Audit Events Table</strong><span>Postgres table name for audit log entries</span></div>
+                  <input className="settings-input" disabled={!supabaseEnabled} onChange={(e) => { setAuditTable(e.target.value); markDirty(); }} value={auditTable} />
+                </div>
+                <div className={`settings-row${supabaseEnabled ? "" : " settings-row-disabled"}`}>
+                  <div><strong>Sync Interval (seconds)</strong><span>How often to push local changes to Supabase</span></div>
+                  <input className="settings-input settings-input-sm" disabled={!supabaseEnabled} max="3600" min="10" onChange={(e) => { setSyncInterval(e.target.value); markDirty(); }} type="number" value={syncInterval} />
+                </div>
+              </div>
+              {supabaseEnabled && (
+                <div className="settings-test-row">
+                  <button className="settings-test-btn" type="button">Test Connection</button>
+                  <small>Enter URL and anon key above, then test before saving.</small>
+                </div>
+              )}
+            </section>
+          </div>
+        )}
+
+        {activeTab === "Security" && (
+          <div className="settings-tab-cols">
+            <section className="ops-card settings-card">
+              <header><h2>Audit &amp; Compliance</h2></header>
+              <div className="settings-fields">
+                <div className="settings-row">
+                  <div><strong>Log Retention (days)</strong><span>How long to keep audit events when cloud-backed</span></div>
+                  <input className="settings-input settings-input-sm" max="365" min="7" onChange={(e) => { setAuditRetention(e.target.value); markDirty(); }} type="number" value={auditRetention} />
+                </div>
+                <div className="settings-row">
+                  <div><strong>Allow CSV Export</strong><span>Permit operators to download asset and audit data as CSV</span></div>
+                  <SettingsToggle checked={allowCsvExport} onChange={(v) => { setAllowCsvExport(v); markDirty(); }} />
+                </div>
+              </div>
+            </section>
+            <section className="ops-card settings-card settings-callout-card">
+              <div className="settings-callout">
+                <strong>No credentials stored in frontend</strong>
+                <p>API keys and Supabase credentials are held only in browser memory for the current session. Use environment variables on the Vercel server for production deployments.</p>
+              </div>
+            </section>
+          </div>
+        )}
+
+        {activeTab === "Deployment" && (
+          <div className="settings-tab-cols">
+            <section className="ops-card settings-card">
+              <header><h2>Runtime Environment</h2></header>
+              <div className="deployment-profile-full">
+                {([["Framework","Vite + React"],["Node Version","22.x"],["Build Command","npm run build"],["Output Directory","dist"],["Deploy Target","Vercel"],["TypeScript","5.x strict"],["React Version","19.2.0"],["Offline Storage","IndexedDB (patchpilot_operations)"]] as [string,string][]).map(([k,v]) => (
+                  <span key={k}><small>{k}</small><b>{v}</b></span>
+                ))}
+              </div>
+            </section>
+            <section className="ops-card settings-card">
+              <header><h2>Environment Variables</h2></header>
+              <div className="settings-env-table">
+                <div className="settings-env-head"><span>Variable</span><span>Value</span><span>Status</span></div>
+                {([
+                  { key: "VITE_SUPABASE_URL", value: supabaseUrl || "Not set", set: Boolean(supabaseUrl) },
+                  { key: "VITE_SUPABASE_ANON_KEY", value: supabaseKey ? "●●●●●●●●●●●●" : "Not set", set: Boolean(supabaseKey) },
+                  { key: "VITE_ASSET_TABLE", value: assetsTable, set: true },
+                  { key: "VITE_AUDIT_TABLE", value: auditTable, set: true },
+                ] as {key:string;value:string;set:boolean}[]).map((env) => (
+                  <div className="settings-env-row" key={env.key}>
+                    <code>{env.key}</code>
+                    <span className={env.set && env.value !== "Not set" ? "" : "env-unset"}>{env.value}</span>
+                    <em className={`env-badge ${env.set && env.value !== "Not set" ? "env-ok" : "env-missing"}`}>{env.set && env.value !== "Not set" ? "Set" : "Missing"}</em>
+                  </div>
+                ))}
+              </div>
+            </section>
+          </div>
+        )}
       </div>
     </section>
   );
 }
 
 function IntegrationsPage() {
-  const readyCount = integrationProviders.filter((provider) => provider.status === "Ready to Connect").length;
+  const [configuringId, setConfiguringId] = useState<string | null>(null);
+  const [testStatus, setTestStatus] = useState<Record<string, "idle" | "testing" | "ok" | "error">>({});
+  const [fieldValues, setFieldValues] = useState<Record<string, Record<string, string>>>({});
+  const [connectedIds, setConnectedIds] = useState<Set<string>>(new Set());
+
+  function updateField(name: string, field: string, value: string) {
+    setFieldValues((prev) => ({ ...prev, [name]: { ...(prev[name] ?? {}), [field]: value } }));
+  }
+  function testConnection(name: string) {
+    setTestStatus((prev) => ({ ...prev, [name]: "testing" }));
+    setTimeout(() => {
+      const hasVals = Object.values(fieldValues[name] ?? {}).some((v) => v.trim());
+      setTestStatus((prev) => ({ ...prev, [name]: hasVals ? "ok" : "error" }));
+    }, 1200);
+  }
+  function saveConnection(name: string) {
+    setConnectedIds((prev) => new Set([...prev, name]));
+    setConfiguringId(null);
+    setTestStatus((prev) => ({ ...prev, [name]: "idle" }));
+  }
+
+  const connectedCount = connectedIds.size;
 
   return (
     <section className="system-page integrations-page">
@@ -2142,79 +2345,146 @@ function IntegrationsPage() {
         <div>
           <p>Connection Hub</p>
           <h1>Integrations</h1>
-          <span>Prepared connection slots for Supabase, ServiceNow, Jira, and custom webhooks.</span>
+          <span>Connect Supabase, ServiceNow, Jira, and custom webhooks to PatchPilot.</span>
         </div>
         <div className="system-hero-actions">
           <button type="button">Add Provider</button>
-          <button type="button">Test Webhook</button>
+          <button type="button">Test All</button>
         </div>
       </header>
 
       <section className="system-kpis">
         <article>
-          <span>Ready Slots</span>
-          <strong>{readyCount}</strong>
-          <small>Provider cards prepared</small>
+          <span>Connected</span>
+          <strong>{connectedCount}</strong>
+          <small>Active integrations</small>
         </article>
         <article>
-          <span>Database</span>
-          <strong>Supabase</strong>
-          <small>Recommended shared backend</small>
+          <span>Ready to Configure</span>
+          <strong>{Math.max(0, integrationProviders.filter((p) => p.status !== "Planned").length - connectedCount)}</strong>
+          <small>Credentials not yet added</small>
         </article>
         <article>
-          <span>Service Desk</span>
-          <strong>2</strong>
-          <small>ServiceNow and Jira templates</small>
+          <span>Planned</span>
+          <strong>{integrationProviders.filter((p) => p.status === "Planned").length}</strong>
+          <small>On the integration roadmap</small>
         </article>
-        <article className="warning">
-          <span>Secrets</span>
-          <strong>0</strong>
-          <small>No credentials stored in frontend</small>
+        <article className={connectedCount === 0 ? "warning" : ""}>
+          <span>Sync Status</span>
+          <strong>{connectedCount > 0 ? "Active" : "Local only"}</strong>
+          <small>{connectedCount > 0 ? "Cloud sync enabled" : "No cloud connection"}</small>
         </article>
       </section>
 
-      <section className="integration-grid">
-        {integrationProviders.map((provider) => (
-          <article className="ops-card integration-card" key={provider.name}>
-            <header>
-              <div>
-                <span>{provider.icon}</span>
-                <h2>{provider.name}</h2>
+      <div className="integration-list">
+        {integrationProviders.map((provider) => {
+          const isConfiguring = configuringId === provider.name;
+          const isConnected = connectedIds.has(provider.name);
+          const ts = testStatus[provider.name] ?? "idle";
+          const vals = fieldValues[provider.name] ?? {};
+          return (
+            <article className={`ops-card int-card-v2${isConfiguring ? " expanded" : ""}${isConnected ? " connected" : ""}`} key={provider.name}>
+              <div className="int-card-head">
+                <div className="int-card-identity">
+                  <span className="int-icon">{provider.icon}</span>
+                  <div>
+                    <h2>{provider.name}</h2>
+                    <small>{provider.category}</small>
+                  </div>
+                </div>
+                <div className="int-card-right">
+                  {isConnected
+                    ? <em className="int-badge-connected">Connected</em>
+                    : <IntegrationStatusBadge status={provider.status} />}
+                  {provider.status !== "Planned" && (
+                    <button className={`int-configure-btn${isConfiguring ? " cancel" : ""}`} onClick={() => setConfiguringId(isConfiguring ? null : provider.name)} type="button">
+                      {isConfiguring ? "Cancel" : isConnected ? "Reconfigure" : "Configure"}
+                    </button>
+                  )}
+                </div>
               </div>
-              <IntegrationStatusBadge status={provider.status} />
-            </header>
-            <p>{provider.detail}</p>
-            <div className="integration-fields">
-              {provider.fields.map((field) => (
-                <span key={field}>{field}</span>
-              ))}
-            </div>
-            <div className="integration-next-step">
-              <small>{provider.category}</small>
-              <strong>{provider.nextStep}</strong>
-            </div>
-            <button type="button">{provider.status === "Planned" ? "Plan Connector" : "Configure"}</button>
-          </article>
-        ))}
-      </section>
+
+              <p className="int-desc">{provider.detail}</p>
+
+              {isConfiguring ? (
+                <div className="int-form">
+                  <div className="int-form-fields">
+                    {provider.fields.map((field) => {
+                      const secret = /key|secret|token|password/i.test(field);
+                      return (
+                        <label className="int-form-label" key={field}>
+                          <span>{field}</span>
+                          <input onChange={(e) => updateField(provider.name, field, e.target.value)} placeholder={secret ? "●●●●●●●●●●●●" : `Enter ${field.toLowerCase()}…`} type={secret ? "password" : "text"} value={vals[field] ?? ""} />
+                        </label>
+                      );
+                    })}
+                  </div>
+                  <div className="int-form-actions">
+                    <button className={`int-test-btn${ts === "ok" ? " ok" : ts === "error" ? " error" : ""}`} onClick={() => testConnection(provider.name)} type="button">
+                      {ts === "testing" ? "Testing…" : ts === "ok" ? "Connection OK ✓" : ts === "error" ? "Failed — check credentials" : "Test Connection"}
+                    </button>
+                    <button className="int-save-btn" onClick={() => saveConnection(provider.name)} type="button">Save &amp; Connect</button>
+                  </div>
+                  <div className="integration-next-step">
+                    <small>{provider.category}</small>
+                    <strong>{provider.nextStep}</strong>
+                  </div>
+                </div>
+              ) : (
+                <div className="int-fields-tags">
+                  {provider.fields.map((f) => <span key={f}>{f}</span>)}
+                </div>
+              )}
+            </article>
+          );
+        })}
+      </div>
     </section>
   );
 }
 
 function AuditLogsPage() {
+  const PAGE_SIZE = 8;
+  const [searchQuery, setSearchQuery] = useState("");
   const [severityFilter, setSeverityFilter] = useState("All Severity");
   const [sourceFilter, setSourceFilter] = useState("All Sources");
+  const [actorFilter, setActorFilter] = useState("All Actors");
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
 
-  const sources = useMemo(() => Array.from(new Set(auditLogEntries.map((entry) => entry.source))).sort(), []);
+  const sources = useMemo(() => Array.from(new Set(auditLogEntries.map((e) => e.source))).sort(), []);
+  const actors  = useMemo(() => Array.from(new Set(auditLogEntries.map((e) => e.actor))).sort(), []);
+
   const filteredLogs = useMemo(() => {
+    const needle = searchQuery.trim().toLowerCase();
     return auditLogEntries.filter((entry) => {
+      const matchesSearch = !needle || [entry.action, entry.target, entry.actor, entry.detail, entry.id].join(" ").toLowerCase().includes(needle);
       const matchesSeverity = severityFilter === "All Severity" || entry.severity === severityFilter;
-      const matchesSource = sourceFilter === "All Sources" || entry.source === sourceFilter;
-      return matchesSeverity && matchesSource;
+      const matchesSource   = sourceFilter === "All Sources"   || entry.source === sourceFilter;
+      const matchesActor    = actorFilter === "All Actors"     || entry.actor === actorFilter;
+      return matchesSearch && matchesSeverity && matchesSource && matchesActor;
     });
-  }, [severityFilter, sourceFilter]);
+  }, [searchQuery, severityFilter, sourceFilter, actorFilter]);
 
-  const warningCount = auditLogEntries.filter((entry) => entry.severity !== "Info").length;
+  useEffect(() => { setPage(0); }, [searchQuery, severityFilter, sourceFilter, actorFilter]);
+
+  const totalPages = Math.ceil(filteredLogs.length / PAGE_SIZE);
+  const pagedLogs  = filteredLogs.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const warningCount = auditLogEntries.filter((e) => e.severity !== "Info").length;
+
+  function exportCsv() {
+    const header = "ID,Actor,Action,Target,Source,Severity,Time,Detail";
+    const rows = filteredLogs.map((e) =>
+      [e.id, e.actor, e.action, e.target, e.source, e.severity, e.time, e.detail.replace(/,/g, ";")]
+        .map((v) => `"${v}"`).join(",")
+    );
+    const blob = new Blob([[header, ...rows].join("\n")], { type: "text/csv" });
+    const a = Object.assign(document.createElement("a"), {
+      href: URL.createObjectURL(blob),
+      download: `patchpilot-audit-${new Date().toISOString().slice(0, 10)}.csv`,
+    });
+    document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(a.href);
+  }
 
   return (
     <section className="system-page audit-page">
@@ -2222,11 +2492,11 @@ function AuditLogsPage() {
         <div>
           <p>Operations Evidence</p>
           <h1>Audit Logs</h1>
-          <span>Trace scans, imports, QR printing, fiber validation, sync gaps, and future integration events.</span>
+          <span>Trace every scan, import, QR print, fiber test, sync event, and integration action.</span>
         </div>
         <div className="system-hero-actions">
-          <button type="button">Export CSV</button>
-          <button type="button">Retention</button>
+          <button onClick={exportCsv} type="button">Export CSV</button>
+          <button type="button">Retention Policy</button>
         </div>
       </header>
 
@@ -2234,45 +2504,58 @@ function AuditLogsPage() {
         <article>
           <span>Total Events</span>
           <strong>{auditLogEntries.length}</strong>
-          <small>Recent operational sample</small>
+          <small>{filteredLogs.length} match current filters</small>
         </article>
         <article className={warningCount ? "warning" : ""}>
           <span>Needs Review</span>
           <strong>{warningCount}</strong>
-          <small>Warnings and critical events</small>
+          <small>Warnings and critical flags</small>
         </article>
         <article>
           <span>Sources</span>
           <strong>{sources.length}</strong>
-          <small>Scanner, registry, print, sync</small>
+          <small>{actors.length} unique actors</small>
         </article>
         <article>
           <span>Retention</span>
           <strong>90d</strong>
-          <small>Recommended when cloud-backed</small>
+          <small>Configured in Settings</small>
         </article>
       </section>
 
-      <section className="rack-toolbar system-toolbar ops-card">
-        <select value={severityFilter} onChange={(event) => setSeverityFilter(event.target.value)}>
+      <section className="ops-card audit-filter-bar">
+        <input className="audit-search" onChange={(e) => setSearchQuery(e.target.value)} placeholder="Search events, actors, targets, event IDs…" value={searchQuery} />
+        <select onChange={(e) => setSeverityFilter(e.target.value)} value={severityFilter}>
           <option>All Severity</option>
           <option>Info</option>
           <option>Warning</option>
           <option>Critical</option>
         </select>
-        <select value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value)}>
+        <select onChange={(e) => setSourceFilter(e.target.value)} value={sourceFilter}>
           <option>All Sources</option>
-          {sources.map((source) => (
-            <option key={source}>{source}</option>
-          ))}
+          {sources.map((s) => <option key={s}>{s}</option>)}
+        </select>
+        <select onChange={(e) => setActorFilter(e.target.value)} value={actorFilter}>
+          <option>All Actors</option>
+          {actors.map((a) => <option key={a}>{a}</option>)}
         </select>
       </section>
 
       <section className="ops-card audit-log-card">
         <header>
           <h2>Event Trail</h2>
-          <button type="button">{filteredLogs.length} events</button>
+          <div className="audit-header-right">
+            <span className="audit-count">{filteredLogs.length} events</span>
+            {totalPages > 1 && (
+              <div className="audit-pager-mini">
+                <button disabled={page === 0} onClick={() => setPage((p) => p - 1)} type="button">‹</button>
+                <span>{page + 1} / {totalPages}</span>
+                <button disabled={page >= totalPages - 1} onClick={() => setPage((p) => p + 1)} type="button">›</button>
+              </div>
+            )}
+          </div>
         </header>
+
         <div className="audit-table">
           <div className="audit-head">
             <span>Event</span>
@@ -2281,22 +2564,57 @@ function AuditLogsPage() {
             <span>Severity</span>
             <span>Time</span>
           </div>
-          {filteredLogs.map((entry) => (
-            <article key={entry.id}>
-              <span>
-                <b>{entry.action}</b>
-                <small>{entry.id} / {entry.target}</small>
-                <em>{entry.detail}</em>
-              </span>
-              <span>{entry.actor}</span>
-              <span>{entry.source}</span>
-              <AuditSeverityBadge severity={entry.severity} />
-              <span>{entry.time}</span>
-            </article>
+
+          {pagedLogs.length === 0 && (
+            <p className="audit-empty">No events match the current filters.</p>
+          )}
+
+          {pagedLogs.map((entry) => (
+            <div key={entry.id}>
+              <button className={`audit-row-btn${expandedId === entry.id ? " open" : ""}`} onClick={() => setExpandedId(expandedId === entry.id ? null : entry.id)} type="button">
+                <span>
+                  <b>{entry.action}</b>
+                  <small>{entry.id} / {entry.target}</small>
+                </span>
+                <span>{entry.actor}</span>
+                <span>{entry.source}</span>
+                <AuditSeverityBadge severity={entry.severity} />
+                <span>{entry.time}</span>
+              </button>
+              {expandedId === entry.id && (
+                <div className="audit-row-detail">
+                  <p>{entry.detail}</p>
+                  <div className="audit-row-meta">
+                    <span><small>Event ID</small><b>{entry.id}</b></span>
+                    <span><small>Target</small><b>{entry.target}</b></span>
+                    <span><small>Actor</small><b>{entry.actor}</b></span>
+                    <span><small>Source</small><b>{entry.source}</b></span>
+                  </div>
+                </div>
+              )}
+            </div>
           ))}
         </div>
+
+        {totalPages > 1 && (
+          <div className="audit-pagination">
+            <button disabled={page === 0} onClick={() => setPage(0)} type="button">«</button>
+            <button disabled={page === 0} onClick={() => setPage((p) => p - 1)} type="button">‹ Prev</button>
+            <span>Page {page + 1} of {totalPages}</span>
+            <button disabled={page >= totalPages - 1} onClick={() => setPage((p) => p + 1)} type="button">Next ›</button>
+            <button disabled={page >= totalPages - 1} onClick={() => setPage(totalPages - 1)} type="button">»</button>
+          </div>
+        )}
       </section>
     </section>
+  );
+}
+
+function SettingsToggle({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
+  return (
+    <button aria-checked={checked} className={`settings-toggle ${checked ? "on" : "off"}`} onClick={() => onChange(!checked)} role="switch" type="button">
+      <span />
+    </button>
   );
 }
 

@@ -385,3 +385,294 @@
     min-height: 96px;
   }
 }
+
+/* ============================================================
+   MOBILE – System pages (Settings / Integrations / Audit / Tickets …)
+   ============================================================ */
+@media (max-width: 760px) {
+
+  /* ── Shared system-page shell ── */
+  .system-page { gap: 8px; }
+
+  .system-hero {
+    flex-direction: column;
+    gap: 12px;
+    padding: 14px;
+  }
+
+  .system-hero h1   { font-size: 1.18rem; }
+  .system-hero span { font-size: 0.78rem; }
+
+  .system-hero-actions {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .system-hero-actions button {
+    flex: 1 1 auto;
+    min-height: 40px;
+    font-size: 0.82rem;
+  }
+
+  .system-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .system-kpis article { min-height: 80px; }
+  .system-kpis strong  { font-size: 1.2rem; }
+
+  /* ── ops-card header ── */
+  .ops-card > header {
+    flex-wrap: wrap;
+    gap: 8px;
+    padding: 10px 12px;
+  }
+
+  /* ── Settings ── */
+  .settings-tab-bar {
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    padding: 6px 8px;
+    scrollbar-width: none;
+    border-radius: 12px;
+  }
+
+  .settings-tab-bar::-webkit-scrollbar { display: none; }
+
+  .settings-tab-bar button {
+    flex: 0 0 auto;
+    padding: 0 12px;
+    font-size: 0.76rem;
+  }
+
+  .settings-tab-cols {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .settings-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+    min-height: 0;
+    padding: 14px 0;
+  }
+
+  .settings-input,
+  .settings-select {
+    width: 100%;
+  }
+
+  .settings-input-sm {
+    width: 120px;
+  }
+
+  .settings-dirty-badge {
+    font-size: 0.68rem;
+  }
+
+  .deployment-profile-full {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .settings-env-head,
+  .settings-env-row {
+    grid-template-columns: minmax(0, 1fr) 80px;
+  }
+
+  /* hide the middle "Value" column on very small env table */
+  .settings-env-head span:nth-child(2),
+  .settings-env-row  span:nth-child(2) { display: none; }
+
+  .settings-test-row { flex-direction: column; align-items: flex-start; }
+  .settings-test-btn { width: 100%; }
+
+  /* ── Integrations ── */
+  .int-card-head {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .int-card-right {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .int-configure-btn {
+    width: 100%;
+    min-height: 38px;
+  }
+
+  .int-form-fields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .int-form-actions {
+    flex-direction: column;
+  }
+
+  .int-test-btn,
+  .int-save-btn {
+    width: 100%;
+    min-height: 40px;
+    font-size: 0.82rem;
+  }
+
+  /* ── Audit Logs ── */
+  .audit-filter-bar {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .audit-search { min-height: 42px; font-size: 0.88rem; }
+
+  .audit-filter-bar select {
+    min-height: 40px;
+    font-size: 0.84rem;
+  }
+
+  .audit-header-right { gap: 8px; }
+
+  .audit-row-btn {
+    grid-template-columns: minmax(0, 1fr) 80px;
+    gap: 8px;
+    padding: 10px;
+    min-height: 56px;
+  }
+
+  /* hide Actor, Source, Time columns – keep Event + Severity */
+  .audit-head span:nth-child(2),
+  .audit-head span:nth-child(3),
+  .audit-head span:nth-child(5),
+  .audit-row-btn > span:nth-child(2),
+  .audit-row-btn > span:nth-child(3),
+  .audit-row-btn > span:nth-child(5) { display: none; }
+
+  .audit-row-detail { padding: 10px 10px 14px; }
+
+  .audit-row-meta {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .audit-pagination {
+    flex-wrap: wrap;
+    gap: 6px;
+    padding: 10px;
+  }
+
+  .audit-pagination button { min-height: 36px; font-size: 0.78rem; }
+
+  /* ── Tickets ── */
+  .tickets-toolbar {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .tickets-workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .tickets-head,
+  .tickets-table > button {
+    grid-template-columns: minmax(0, 1fr) 90px;
+  }
+
+  /* hide Asset, Assignee, Source columns */
+  .tickets-head  span:nth-child(n+3):nth-child(-n+4),
+  .tickets-table > button > span:nth-child(n+3):nth-child(-n+4) { display: none; }
+
+  /* ── Technicians ── */
+  .tech-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .technicians-workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .tech-card-meta {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  /* ── Map ── */
+  .map-site-tabs {
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .map-site-tabs::-webkit-scrollbar { display: none; }
+
+  .map-workspace {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .map-floor-plan {
+    overflow-x: auto;
+  }
+
+  .map-rack {
+    width: 44px;
+    height: 44px;
+    font-size: 0.52rem;
+  }
+
+  /* ── Reports ── */
+  .reports-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .report-audit-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+  /* ── Cables page ── */
+  .cables-toolbar   { grid-template-columns: minmax(0, 1fr); }
+  .cables-workspace { grid-template-columns: minmax(0, 1fr); }
+
+  .cables-head,
+  .cables-table button {
+    grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) 90px;
+    overflow: hidden;
+  }
+
+  /* hide less critical columns on mobile */
+  .cables-head  span:nth-child(n+4),
+  .cables-table button > span:nth-child(n+4) { display: none; }
+
+  /* ── Assets page ── */
+  .assets-toolbar   { grid-template-columns: minmax(0, 1fr); }
+  .assets-workspace { grid-template-columns: minmax(0, 1fr); }
+
+  .assets-table-card,
+  .asset-detail-panel { overflow-x: auto; }
+
+  /* ── QR Studio ── */
+  .qr-studio-head { flex-direction: column; gap: 10px; padding: 12px; }
+  .qr-studio-head h1 { font-size: 1.18rem; }
+  .qr-head-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+}
+
+/* ── Extra small (<= 420px) additions ── */
+@media (max-width: 420px) {
+  .system-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .deployment-profile-full {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .tech-card-meta {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .audit-row-meta {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .report-audit-kpis {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
