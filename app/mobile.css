@@ -102,7 +102,24 @@
   }
 
   .topbar-right {
+    gap: 8px;
+    margin-left: auto;
+  }
+
+  /* hide text-only elements, keep action buttons */
+  .topbar-right > strong,
+  .topbar-right > .online-dot,
+  .topbar-right > .user-chip {
     display: none;
+  }
+
+  /* make panels open upward / left-aligned on mobile */
+  .notif-panel,
+  .help-panel {
+    right: auto;
+    left: 0;
+    width: calc(100vw - 24px);
+    max-width: 360px;
   }
 
   .global-search-menu {
