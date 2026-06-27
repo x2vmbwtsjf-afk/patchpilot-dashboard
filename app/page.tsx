@@ -2,7 +2,7 @@
 
 import jsQR from "jsqr";
 import QRCode from "qrcode";
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from "react";
 
 type Severity = "Critical" | "High" | "Medium" | "Low";
 type Health = "Healthy" | "Warning" | "Offline" | "Pending" | "Online";
@@ -117,6 +117,8 @@ type AssetDatabaseApi = {
   put: (asset: AssetRecord) => Promise<void>;
   getById: (id: string) => Promise<AssetRecord | null>;
 };
+
+type ImportedAssetRow = Record<string, unknown>;
 
 type BarcodeDetectorResult = {
   rawValue: string;
@@ -1066,6 +1068,103 @@ function normalizeAssetLookup(value: string) {
   return value.trim().replace("patchpilot://asset/", "").replace("https://app.patchpilot.io/a/", "");
 }
 
+function normalizeImportHeader(value: string) {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[\s_\-./:()#"']/g, "");
+}
+
+function stringifyImportValue(value: unknown) {
+  if (value === null || typeof value === "undefined") return "";
+  if (value instanceof Date) return value.toISOString();
+  return String(value).trim();
+}
+
+function readImportedValue(row: ImportedAssetRow, aliases: string[]) {
+  const normalizedAliases = aliases.map(normalizeImportHeader);
+
+  for (const [header, value] of Object.entries(row)) {
+    if (normalizedAliases.includes(normalizeImportHeader(header))) {
+      return stringifyImportValue(value);
+    }
+  }
+
+  return "";
+}
+
+function readImportedCableNumber(row: ImportedAssetRow) {
+  return readImportedValue(row, ["cable number", "cable no", "cable id", "cable", "cable#", "מספר כבל", "כבל", "מספרכבל"]);
+}
+
+function normalizeImportedStatus(value: string): AssetStatus {
+  const normalized = value.trim().toLowerCase();
+  const match = assetStatuses.find((status) => status.toLowerCase() === normalized);
+  if (match) return match;
+  if (["פעיל", "active", "online"].includes(normalized)) return "Active";
+  if (["בשירות", "inservice", "in service"].includes(normalized)) return "In Service";
+  if (["במלאי", "stock", "instock", "in stock"].includes(normalized)) return "In Stock";
+  if (["תקלה", "maintenance", "טיפול"].includes(normalized)) return "Maintenance";
+  if (["offline", "לאפעיל", "לא פעיל"].includes(normalized)) return "Offline";
+  if (["retired", "יצאמשימוש", "יצא משימוש"].includes(normalized)) return "Retired";
+  return "Active";
+}
+
+function inferImportedAssetType(row: ImportedAssetRow) {
+  const explicitType = readImportedValue(row, ["asset type", "type", "category", "kind", "סוג", "קטגוריה", "סוג נכס"]);
+  if (explicitType) return explicitType;
+
+  const cableNumber = readImportedCableNumber(row);
+  const connector = readImportedValue(row, ["connector", "connector type", "מחבר"]);
+  const cableType = readImportedValue(row, ["cable type", "סוג כבל"]);
+  const tags = readImportedValue(row, ["tags", "tag", "תגיות"]);
+  const searchable = [cableNumber, connector, cableType, tags].join(" ").toLowerCase();
+
+  if (searchable.includes("gbic") || searchable.includes("sfp") || searchable.includes("qsfp") || searchable.includes("optic")) return "GBIC";
+  if (cableNumber || searchable.includes("fiber") || searchable.includes("copper") || searchable.includes("dac") || searchable.includes("כבל")) return "Fiber Cable";
+  return "Server";
+}
+
+function createAssetFromImportedRow(row: ImportedAssetRow, rowIndex: number): AssetRecord | null {
+  const now = new Date().toISOString();
+  const importedId = readImportedValue(row, ["id", "asset id", "asset tag", "qr", "qr code", "qr id", "מזהה", "מזהה נכס", "קוד"]);
+  const id = importedId ? normalizeAssetLookup(importedId) : createAssetId();
+  const cableNumber = readImportedCableNumber(row);
+  const assetType = inferImportedAssetType(row);
+  const name = readImportedValue(row, ["name", "asset name", "hostname", "host", "device name", "שם", "שם נכס", "שרת"]) || cableNumber || `${assetType} ${rowIndex + 1}`;
+  const serial = readImportedValue(row, ["serial", "serial number", "s/n", "sn", "service tag", "סריאל", "מספר סידורי"]) || cableNumber;
+  const ipAddress = readImportedValue(row, ["ip", "ip address", "management ip", "mgmt ip", "אייפי", "ip ניהול", "כתובת ip"]);
+
+  if (!id || (!name && !serial && !ipAddress && !cableNumber)) return null;
+
+  return {
+    id,
+    qrCode: id,
+    assetType,
+    name,
+    serial,
+    status: normalizeImportedStatus(readImportedValue(row, ["status", "state", "סטטוס", "מצב"])),
+    site: readImportedValue(row, ["site", "location", "dc", "datacenter", "אתר", "מיקום"]),
+    room: readImportedValue(row, ["room", "חדר"]),
+    rack: readImportedValue(row, ["rack", "cabinet", "ארון", "מסד"]),
+    ruPosition: readImportedValue(row, ["ru", "u", "ru position", "unit", "מיקום u"]),
+    ipAddress,
+    macAddress: readImportedValue(row, ["mac", "mac address", "מק", "כתובת mac"]),
+    vlan: readImportedValue(row, ["vlan", "vlans"]),
+    switchPort: readImportedValue(row, ["switch port", "port", "interface", "פורט", "כניסה"]),
+    cableType: readImportedValue(row, ["cable type", "cable kind", "סוג כבל"]),
+    length: readImportedValue(row, ["length", "reach", "אורך"]),
+    connectorType: readImportedValue(row, ["connector", "connector type", "מחבר"]),
+    from: readImportedValue(row, ["from", "source", "מקור", "מ"]),
+    to: readImportedValue(row, ["to", "destination", "יעד", "אל"]),
+    notes: readImportedValue(row, ["notes", "note", "comments", "הערות"]),
+    tags: readImportedValue(row, ["tags", "tag", "תגיות"]) || (cableNumber ? "import,cable" : "import"),
+    owner: readImportedValue(row, ["owner", "team", "department", "אחראי", "צוות"]),
+    createdAt: now,
+    updatedAt: now
+  };
+}
+
 function getBarcodeDetectorConstructor() {
   return (window as unknown as { BarcodeDetector?: BarcodeDetectorConstructor }).BarcodeDetector;
 }
@@ -1433,6 +1532,7 @@ export default function DashboardPage() {
               setSelectedAsset(null);
               setActiveNav("QR Studio");
             }}
+            onAssetsImported={refreshSavedAssets}
             onOpenQrStudio={(asset) => {
               setSelectedAsset(asset);
               setActiveNav("QR Studio");
@@ -1952,10 +2052,12 @@ function DeviceDetails({ device, selectedCableId }: { device: RackDevice; select
 function AssetsInventoryPage({
   savedAssets,
   onCreateAsset,
+  onAssetsImported,
   onOpenQrStudio
 }: {
   savedAssets: AssetRecord[];
   onCreateAsset: () => void;
+  onAssetsImported: () => Promise<void>;
   onOpenQrStudio: (asset: AssetRecord) => void;
 }) {
   const assetRows = useMemo(() => {
@@ -1970,6 +2072,8 @@ function AssetsInventoryPage({
   const [categoryFilter, setCategoryFilter] = useState("All Categories");
   const [siteFilter, setSiteFilter] = useState("All Sites");
   const [statusFilter, setStatusFilter] = useState("All Status");
+  const [importMessage, setImportMessage] = useState("");
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const sites = useMemo(() => Array.from(new Set(assetRows.map((asset) => asset.site).filter(Boolean))).sort(), [assetRows]);
 
@@ -2033,6 +2137,50 @@ function AssetsInventoryPage({
 
   const attentionAssets = useMemo(() => assetRows.filter((asset) => asset.status === "Maintenance" || asset.status === "Offline" || !asset.qrCode), [assetRows]);
 
+  async function importAssetFile(file: File) {
+    setImportMessage(`Importing ${file.name}...`);
+
+    try {
+      const XLSX = await import("xlsx");
+      const buffer = await file.arrayBuffer();
+      const workbook = XLSX.read(buffer, { type: "array", cellDates: true });
+      const firstSheetName = workbook.SheetNames[0];
+
+      if (!firstSheetName) {
+        setImportMessage("No worksheet found in this file.");
+        return;
+      }
+
+      const sheet = workbook.Sheets[firstSheetName];
+      const rows = XLSX.utils.sheet_to_json<ImportedAssetRow>(sheet, { defval: "", raw: false });
+      const importedAssets = rows
+        .map((row, index) => createAssetFromImportedRow(row, index))
+        .filter((asset): asset is AssetRecord => Boolean(asset));
+
+      if (!importedAssets.length) {
+        setImportMessage("No importable asset rows found. Check the header row.");
+        return;
+      }
+
+      const database = await getAssetDatabase();
+      await Promise.all(importedAssets.map((asset) => database.put(asset)));
+      await onAssetsImported();
+      setSelectedAssetId(importedAssets[0].id);
+      setAssetQuery("");
+      setCategoryFilter("All Categories");
+      setImportMessage(`Imported ${importedAssets.length} assets. Each row now has a printable QR.`);
+    } catch {
+      setImportMessage("Import failed. Use .xlsx, .xls, or .csv with a clear header row.");
+    }
+  }
+
+  function handleAssetImport(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    void importAssetFile(file);
+  }
+
   return (
     <section className="assets-page">
       <header className="racks-hero assets-hero">
@@ -2043,10 +2191,19 @@ function AssetsInventoryPage({
         </div>
         <div className="racks-actions">
           <button onClick={onCreateAsset} type="button">Add Asset</button>
-          <button type="button">Bulk Import</button>
+          <button onClick={() => fileInputRef.current?.click()} type="button">Bulk Import</button>
           <button type="button">Export CSV</button>
+          <input
+            ref={fileInputRef}
+            accept=".xlsx,.xls,.csv"
+            className="asset-import-input"
+            onChange={handleAssetImport}
+            type="file"
+          />
         </div>
       </header>
+
+      {importMessage && <p className="asset-import-message">{importMessage}</p>}
 
       <section className="dc-command-strip assets-kpis">
         <article>

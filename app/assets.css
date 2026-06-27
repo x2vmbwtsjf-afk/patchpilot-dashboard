@@ -22,6 +22,22 @@
   align-items: start;
 }
 
+.asset-import-input {
+  display: none;
+}
+
+.asset-import-message {
+  max-width: 1450px;
+  margin: -4px auto 10px;
+  border: 1px solid rgba(34, 211, 238, 0.24);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: rgba(34, 211, 238, 0.07);
+  color: #c7f4ff;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
 .assets-table-card,
 .asset-detail-panel {
   overflow: hidden;
