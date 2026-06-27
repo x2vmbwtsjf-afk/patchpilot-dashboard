@@ -14,7 +14,7 @@
 .qr-command-card {
   grid-area: qrhero;
   display: grid;
-  grid-template-columns: minmax(300px, 0.9fr) minmax(440px, 1.1fr);
+  grid-template-columns: minmax(340px, 0.82fr) minmax(480px, 1.18fr);
   gap: 12px;
   align-items: stretch;
   border: 1px solid rgba(125, 211, 252, 0.26);
@@ -27,7 +27,10 @@
 }
 
 .qr-command-copy {
+  display: grid;
+  align-content: center;
   min-width: 0;
+  padding-right: 10px;
 }
 
 .qr-command-copy p,
@@ -59,46 +62,6 @@
   line-height: 1.45;
 }
 
-.command-import-button {
-  display: grid;
-  justify-items: start;
-  width: min(100%, 300px);
-  min-height: 70px;
-  margin-top: 16px;
-  border: 1px solid rgba(34, 211, 238, 0.38);
-  border-radius: 10px;
-  padding: 12px 14px;
-  background: rgba(34, 211, 238, 0.1);
-  color: var(--text);
-  text-align: left;
-}
-
-.command-import-button:hover {
-  border-color: rgba(34, 211, 238, 0.55);
-  background: rgba(34, 211, 238, 0.16);
-}
-
-.command-import-button strong,
-.command-import-button span {
-  display: block;
-  min-width: 0;
-}
-
-.command-import-button strong {
-  color: #edf7ff;
-  font-size: 0.95rem;
-  line-height: 1;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.command-import-button span {
-  margin-top: 7px;
-  color: #9fb4cc;
-  font-size: 0.7rem;
-  line-height: 1.35;
-}
-
 .qr-command-actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -128,6 +91,11 @@
 .qr-command-actions button:first-child {
   border-color: rgba(34, 211, 238, 0.42);
   background: linear-gradient(135deg, rgba(96, 165, 250, 0.22), rgba(34, 211, 238, 0.18));
+}
+
+.qr-command-actions button:last-child {
+  border-color: rgba(125, 211, 252, 0.34);
+  background: rgba(34, 211, 238, 0.09);
 }
 
 .qr-command-actions strong,

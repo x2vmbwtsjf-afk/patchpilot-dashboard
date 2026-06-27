@@ -1600,10 +1600,6 @@ export default function DashboardPage() {
                   <p>Operations Command</p>
                   <h1>Today&apos;s field plan</h1>
                   <span>Keep rack audits, QR labeling, fiber validation, and offline sync work moving from one command surface.</span>
-                  <button className="command-import-button" onClick={() => handleQuickAction(quickActions[2])} type="button">
-                    <strong>Import Assets</strong>
-                    <span>Upload Excel / CSV</span>
-                  </button>
                 </div>
                 <div className="qr-command-actions" aria-label="Primary field actions">
                   <button onClick={() => handleQuickAction(quickActions[0])} type="button">
@@ -1618,9 +1614,9 @@ export default function DashboardPage() {
                     <strong>Rack Audit</strong>
                     <span>Review rack workspace</span>
                   </button>
-                  <button onClick={() => handleQuickAction(quickActions[4])} type="button">
-                    <strong>Work Queue</strong>
-                    <span>High priority jobs</span>
+                  <button onClick={() => handleQuickAction(quickActions[2])} type="button">
+                    <strong>Import Assets</strong>
+                    <span>Upload Excel / CSV</span>
                   </button>
                 </div>
                 <div className="qr-command-stats">
