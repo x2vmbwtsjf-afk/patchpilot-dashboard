@@ -59,48 +59,43 @@
   line-height: 1.45;
 }
 
-.command-focus-list {
+.command-import-button {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 8px;
-  margin-top: 12px;
-}
-
-.command-focus-list article {
-  min-width: 0;
-  border: 1px solid rgba(148, 163, 184, 0.16);
+  justify-items: start;
+  width: min(100%, 300px);
+  min-height: 70px;
+  margin-top: 16px;
+  border: 1px solid rgba(34, 211, 238, 0.38);
   border-radius: 10px;
-  padding: 10px 11px;
-  background: rgba(7, 17, 29, 0.58);
+  padding: 12px 14px;
+  background: rgba(34, 211, 238, 0.1);
+  color: var(--text);
+  text-align: left;
 }
 
-.command-focus-list span,
-.command-focus-list strong,
-.command-focus-list small {
+.command-import-button:hover {
+  border-color: rgba(34, 211, 238, 0.55);
+  background: rgba(34, 211, 238, 0.16);
+}
+
+.command-import-button strong,
+.command-import-button span {
   display: block;
+  min-width: 0;
 }
 
-.command-focus-list span {
-  color: var(--muted);
-  font-size: 0.68rem;
-  font-weight: 900;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-.command-focus-list strong {
-  margin-top: 5px;
-  overflow: hidden;
+.command-import-button strong {
   color: #edf7ff;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
+  line-height: 1;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.command-focus-list small {
-  margin-top: 3px;
+.command-import-button span {
+  margin-top: 7px;
   color: #9fb4cc;
-  font-size: 0.72rem;
+  font-size: 0.7rem;
   line-height: 1.35;
 }
 
@@ -133,12 +128,6 @@
 .qr-command-actions button:first-child {
   border-color: rgba(34, 211, 238, 0.42);
   background: linear-gradient(135deg, rgba(96, 165, 250, 0.22), rgba(34, 211, 238, 0.18));
-}
-
-.qr-command-actions button:nth-child(3) {
-  grid-column: 1 / -1;
-  border-color: rgba(125, 211, 252, 0.34);
-  background: rgba(34, 211, 238, 0.09);
 }
 
 .qr-command-actions strong,
@@ -317,8 +306,7 @@
   }
 
   .qr-command-actions,
-  .qr-command-stats,
-  .command-focus-list {
+  .qr-command-stats {
     grid-template-columns: 1fr;
   }
 
@@ -367,10 +355,6 @@
 
   .qr-command-actions {
     grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .qr-command-actions button:nth-child(3) {
-    grid-column: auto;
   }
 
   .qr-command-actions button {
