@@ -773,6 +773,164 @@ const cableInventory: CableInventoryItem[] = [
   }
 ];
 
+// ── New screen types ──────────────────────────────────────────────────────────
+
+type TicketPriority = "Critical" | "High" | "Medium" | "Low";
+type TicketStatus = "Open" | "In Progress" | "Pending" | "Resolved" | "Closed";
+type TicketSource = "QR Scan" | "Manual" | "Alert" | "Import";
+
+type TicketRecord = {
+  id: string;
+  title: string;
+  description: string;
+  priority: TicketPriority;
+  status: TicketStatus;
+  source: TicketSource;
+  assetId: string;
+  assetName: string;
+  assignee: string;
+  provider: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+type TechnicianDetail = {
+  id: string;
+  name: string;
+  initials: string;
+  task: string;
+  status: Health;
+  site: string;
+  lastSeen: string;
+  ticketsOpen: number;
+  scansToday: number;
+  phone: string;
+  email: string;
+  recentActivity: { action: string; time: string; tone: Tone }[];
+};
+
+// ── Demo data ─────────────────────────────────────────────────────────────────
+
+const demoTickets: TicketRecord[] = [
+  { id: "TK-1254", title: "UPS-C03-A offline alert", description: "UPS unit in RACK-C03 has been offline for 23 minutes. Field check required to determine root cause before the next GPU training batch.", priority: "Critical", status: "Open", source: "Alert", assetId: "PP-000302", assetName: "UPS-C03-A", assignee: "Mike T.", provider: "Local", createdAt: "27 min ago", updatedAt: "27 min ago" },
+  { id: "TK-1253", title: "Fiber signal inconclusive on Fiber-221", description: "Camera validation on Fiber-221 returned an inconclusive result. Signal test needs to be re-run under better lighting conditions.", priority: "High", status: "In Progress", source: "QR Scan", assetId: "PP-000501", assetName: "CBL-A12-B07-LC-01", assignee: "Alex R.", provider: "Local", createdAt: "11 min ago", updatedAt: "4 min ago" },
+  { id: "TK-1252", title: "Duplicate QR code — PP-000128", description: "Two records matched the same QR payload PP-000128. Operator review needed to consolidate or purge the duplicate before the next sync.", priority: "High", status: "Pending", source: "Alert", assetId: "PP-000128", assetName: "SW-LEAF-02", assignee: "David M.", provider: "Local", createdAt: "18 min ago", updatedAt: "18 min ago" },
+  { id: "TK-1251", title: "RACK-C03 cooling threshold exceeded", description: "Temperature at 29.6°C with power draw at 97% of modeled capacity. Requires cooling check before next training cycle.", priority: "High", status: "Open", source: "Alert", assetId: "rack-c03", assetName: "RACK-C03", assignee: "Jordan L.", provider: "Local", createdAt: "35 min ago", updatedAt: "35 min ago" },
+  { id: "TK-1250", title: "STO-CORE-04 firmware maintenance window", description: "Storage controller firmware upgrade scheduled. System will be unavailable; coordinate downtime window with the Platform team.", priority: "Medium", status: "In Progress", source: "Manual", assetId: "PP-000202", assetName: "STO-CORE-04", assignee: "Chris B.", provider: "Local", createdAt: "2 hr ago", updatedAt: "45 min ago" },
+  { id: "TK-1249", title: "GPU-TRAIN-01 high power draw validation", description: "Validate cooling capacity before next training batch. Power draw exceeds normal operating threshold; IB fabric audit also recommended.", priority: "Medium", status: "Open", source: "Manual", assetId: "PP-000301", assetName: "GPU-TRAIN-01", assignee: "David M.", provider: "Local", createdAt: "2 hr ago", updatedAt: "2 hr ago" },
+  { id: "TK-1248", title: "Cable CBL-MGMT-C03-UPS replacement", description: "Cat6A cable tagged for replacement while UPS-C03-A is offline. Coordinate with Facilities before swapping to avoid losing MGMT connectivity.", priority: "Low", status: "Open", source: "QR Scan", assetId: "PP-000502", assetName: "CBL-MGMT-C03-UPS", assignee: "Mike T.", provider: "Local", createdAt: "3 hr ago", updatedAt: "3 hr ago" },
+  { id: "TK-1247", title: "QR label batch print — 24 assets", description: "QR labels were prepared for 24 assets from the asset registry. Verify all labels printed correctly and are physically applied.", priority: "Low", status: "Resolved", source: "Import", assetId: "", assetName: "24 assets", assignee: "Sean P.", provider: "Local", createdAt: "8 hr ago", updatedAt: "3 min ago" }
+];
+
+const technicianDetails: TechnicianDetail[] = [
+  {
+    id: "tech-david",
+    name: "David M.",
+    initials: "DM",
+    task: "Rack Audit",
+    status: "Online",
+    site: "DC1",
+    lastSeen: "Just now",
+    ticketsOpen: 2,
+    scansToday: 14,
+    phone: "+1-555-0101",
+    email: "david.m@ops.local",
+    recentActivity: [
+      { action: "Saved new asset PP-000132 to local DB", time: "Just now", tone: "green" },
+      { action: "Reviewed duplicate QR flag TK-1252", time: "18 min ago", tone: "amber" },
+      { action: "Linked ticket TK-1254 in Command", time: "8 min ago", tone: "blue" },
+      { action: "Opened rack audit RACK-A12", time: "1 hr ago", tone: "blue" }
+    ]
+  },
+  {
+    id: "tech-alex",
+    name: "Alex R.",
+    initials: "AR",
+    task: "Fiber Validation",
+    status: "Online",
+    site: "DC1",
+    lastSeen: "4 min ago",
+    ticketsOpen: 1,
+    scansToday: 9,
+    phone: "+1-555-0102",
+    email: "alex.r@ops.local",
+    recentActivity: [
+      { action: "Fiber signal detected on Fiber-221", time: "11 min ago", tone: "green" },
+      { action: "Scanned RACK-B07 via QR", time: "6 min ago", tone: "blue" },
+      { action: "Assigned to TK-1253", time: "4 min ago", tone: "amber" }
+    ]
+  },
+  {
+    id: "tech-sean",
+    name: "Sean P.",
+    initials: "SP",
+    task: "QR Deployment",
+    status: "Online",
+    site: "DC1",
+    lastSeen: "Just now",
+    ticketsOpen: 0,
+    scansToday: 22,
+    phone: "+1-555-0103",
+    email: "sean.p@ops.local",
+    recentActivity: [
+      { action: "Scanned Rack DC-A12 via QR label", time: "Just now", tone: "green" },
+      { action: "Printed 24 QR labels — TK-1247 resolved", time: "3 min ago", tone: "purple" },
+      { action: "Imported spreadsheet (13 rows)", time: "4 min ago", tone: "blue" }
+    ]
+  },
+  {
+    id: "tech-mike",
+    name: "Mike T.",
+    initials: "MT",
+    task: "Break/Fix",
+    status: "Offline",
+    site: "DC1",
+    lastSeen: "28 min ago",
+    ticketsOpen: 2,
+    scansToday: 3,
+    phone: "+1-555-0104",
+    email: "mike.t@ops.local",
+    recentActivity: [
+      { action: "Printed QR label PP-000171", time: "27 min ago", tone: "purple" },
+      { action: "Offline — last sync 28 min ago", time: "28 min ago", tone: "red" }
+    ]
+  },
+  {
+    id: "tech-jordan",
+    name: "Jordan L.",
+    initials: "JL",
+    task: "Inventory Scan",
+    status: "Pending",
+    site: "DC2",
+    lastSeen: "45 min ago",
+    ticketsOpen: 1,
+    scansToday: 7,
+    phone: "+1-555-0105",
+    email: "jordan.l@ops.local",
+    recentActivity: [
+      { action: "Scanned NAS-EDGE-01 at RACK-A01", time: "7 min ago", tone: "green" },
+      { action: "Pending sync since 45 min ago", time: "45 min ago", tone: "amber" }
+    ]
+  },
+  {
+    id: "tech-chris",
+    name: "Chris B.",
+    initials: "CB",
+    task: "Site Survey",
+    status: "Offline",
+    site: "DC2",
+    lastSeen: "2 hr ago",
+    ticketsOpen: 1,
+    scansToday: 5,
+    phone: "+1-555-0106",
+    email: "chris.b@ops.local",
+    recentActivity: [
+      { action: "Assigned to TK-1250 maintenance window", time: "45 min ago", tone: "blue" },
+      { action: "Offline since 2 hr ago", time: "2 hr ago", tone: "red" }
+    ]
+  }
+];
+
 const assetTableSchema = `assets
 - id
 - qr_code
@@ -1718,6 +1876,14 @@ export default function DashboardPage() {
           <CablesInventoryPage />
         ) : activeNav === "QR Studio" ? (
           <QRStudio initialAsset={selectedAsset} registryAssets={allAssets} onAssetsChanged={refreshSavedAssets} onOpenScanner={() => setIsScannerOpen(true)} />
+        ) : activeNav === "Tickets" ? (
+          <TicketsPage />
+        ) : activeNav === "Technicians" ? (
+          <TechniciansPage />
+        ) : activeNav === "Map" ? (
+          <MapPage onNavigateToRacks={() => setActiveNav("Racks")} />
+        ) : activeNav === "Reports" ? (
+          <ReportsPage />
         ) : activeNav === "Settings" ? (
           <SettingsPage />
         ) : activeNav === "Integrations" ? (
@@ -3735,6 +3901,644 @@ function QRStudio({
             <pre>{qrPayload}</pre>
           </section>
         </aside>
+      </div>
+    </section>
+  );
+}
+
+// ── Ticket badges ─────────────────────────────────────────────────────────────
+
+function TicketPriorityBadge({ priority }: { priority: TicketPriority }) {
+  return <em className={`ticket-priority priority-${priority.toLowerCase()}`}>{priority}</em>;
+}
+
+function TicketStatusBadge({ status }: { status: TicketStatus }) {
+  return <em className={`ticket-status status-${status.toLowerCase().replace(" ", "-")}`}>{status}</em>;
+}
+
+// ── TicketsPage ───────────────────────────────────────────────────────────────
+
+function TicketsPage() {
+  const [selectedTicketId, setSelectedTicketId] = useState(demoTickets[0].id);
+  const [ticketQuery, setTicketQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All Status");
+  const [priorityFilter, setPriorityFilter] = useState("All Priority");
+  const [sourceFilter, setSourceFilter] = useState("All Sources");
+
+  const filteredTickets = useMemo(() => {
+    const needle = ticketQuery.trim().toLowerCase();
+    return demoTickets.filter((ticket) => {
+      const matchesQuery = !needle || [ticket.id, ticket.title, ticket.assetId, ticket.assetName, ticket.assignee].join(" ").toLowerCase().includes(needle);
+      const matchesStatus = statusFilter === "All Status" || ticket.status === statusFilter;
+      const matchesPriority = priorityFilter === "All Priority" || ticket.priority === priorityFilter;
+      const matchesSource = sourceFilter === "All Sources" || ticket.source === sourceFilter;
+      return matchesQuery && matchesStatus && matchesPriority && matchesSource;
+    });
+  }, [ticketQuery, statusFilter, priorityFilter, sourceFilter]);
+
+  const selectedTicket = filteredTickets.find((ticket) => ticket.id === selectedTicketId) ?? filteredTickets[0] ?? demoTickets[0];
+
+  const ticketStats = useMemo(() => ({
+    critical: demoTickets.filter((ticket) => ticket.priority === "Critical").length,
+    open: demoTickets.filter((ticket) => ticket.status === "Open").length,
+    inProgress: demoTickets.filter((ticket) => ticket.status === "In Progress").length,
+    resolved: demoTickets.filter((ticket) => ticket.status === "Resolved" || ticket.status === "Closed").length
+  }), []);
+
+  return (
+    <section className="system-page tickets-page">
+      <header className="system-hero">
+        <div>
+          <p>Field Operations</p>
+          <h1>Tickets</h1>
+          <span>Work orders and incident tracking for assets, racks, cables, and QR-linked field events.</span>
+        </div>
+        <div className="system-hero-actions">
+          <button type="button">New Ticket</button>
+          <button type="button">Connect Jira</button>
+        </div>
+      </header>
+
+      <section className="system-kpis">
+        <article className={ticketStats.critical ? "warning" : ""}>
+          <span>Critical</span>
+          <strong>{ticketStats.critical}</strong>
+          <small>Immediate action required</small>
+        </article>
+        <article>
+          <span>Open</span>
+          <strong>{ticketStats.open}</strong>
+          <small>Awaiting assignment</small>
+        </article>
+        <article>
+          <span>In Progress</span>
+          <strong>{ticketStats.inProgress}</strong>
+          <small>Actively worked</small>
+        </article>
+        <article>
+          <span>Resolved</span>
+          <strong>{ticketStats.resolved}</strong>
+          <small>Closed this session</small>
+        </article>
+      </section>
+
+      <section className="rack-toolbar system-toolbar tickets-toolbar ops-card">
+        <input value={ticketQuery} onChange={(event) => setTicketQuery(event.target.value)} placeholder="Search tickets, assets, assignee..." />
+        <select value={statusFilter} onChange={(event) => setStatusFilter(event.target.value)}>
+          <option>All Status</option>
+          <option>Open</option>
+          <option>In Progress</option>
+          <option>Pending</option>
+          <option>Resolved</option>
+          <option>Closed</option>
+        </select>
+        <select value={priorityFilter} onChange={(event) => setPriorityFilter(event.target.value)}>
+          <option>All Priority</option>
+          <option>Critical</option>
+          <option>High</option>
+          <option>Medium</option>
+          <option>Low</option>
+        </select>
+        <select value={sourceFilter} onChange={(event) => setSourceFilter(event.target.value)}>
+          <option>All Sources</option>
+          <option>QR Scan</option>
+          <option>Manual</option>
+          <option>Alert</option>
+          <option>Import</option>
+        </select>
+      </section>
+
+      <div className="tickets-workspace">
+        <section className="ops-card tickets-list-card">
+          <header>
+            <h2>Work Queue</h2>
+            <button type="button">{filteredTickets.length} tickets</button>
+          </header>
+          <div className="tickets-head">
+            <span>Ticket</span>
+            <span>Asset</span>
+            <span>Assignee</span>
+            <span>Priority</span>
+            <span>Status</span>
+          </div>
+          <div className="tickets-table">
+            {filteredTickets.map((ticket) => (
+              <button className={selectedTicket.id === ticket.id ? "active" : ""} key={ticket.id} onClick={() => setSelectedTicketId(ticket.id)} type="button">
+                <span>
+                  <b>{ticket.title}</b>
+                  <small>{ticket.id} / {ticket.source}</small>
+                </span>
+                <span>
+                  <b>{ticket.assetName || ticket.assetId || "No asset"}</b>
+                  <small>{ticket.assetId}</small>
+                </span>
+                <span>{ticket.assignee}</span>
+                <TicketPriorityBadge priority={ticket.priority} />
+                <TicketStatusBadge status={ticket.status} />
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <aside className="ops-card ticket-detail-panel">
+          <header>
+            <div>
+              <h2>{selectedTicket.title}</h2>
+              <span>{selectedTicket.id} / {selectedTicket.source}</span>
+            </div>
+            <TicketPriorityBadge priority={selectedTicket.priority} />
+          </header>
+
+          <div className="ticket-identity">
+            <TicketStatusBadge status={selectedTicket.status} />
+            <span>{selectedTicket.provider}</span>
+          </div>
+
+          <div className="ticket-detail-grid">
+            <span><small>Asset</small><b>{selectedTicket.assetName || "No asset"}</b></span>
+            <span><small>Asset ID</small><b>{selectedTicket.assetId || "—"}</b></span>
+            <span><small>Assignee</small><b>{selectedTicket.assignee}</b></span>
+            <span><small>Source</small><b>{selectedTicket.source}</b></span>
+            <span><small>Created</small><b>{selectedTicket.createdAt}</b></span>
+            <span><small>Updated</small><b>{selectedTicket.updatedAt}</b></span>
+          </div>
+
+          <section className="ticket-description">
+            <strong>Description</strong>
+            <p>{selectedTicket.description}</p>
+          </section>
+
+          <div className="service-provider-strip">
+            {serviceDeskProviders.map((provider) => (
+              <button key={provider.name} type="button">
+                <span>{provider.icon}</span>
+                <strong>{provider.name}</strong>
+                <em>{provider.status === "Ready" ? "Connect" : "Planned"}</em>
+              </button>
+            ))}
+          </div>
+
+          <div className="ticket-actions">
+            <button type="button">Assign to Me</button>
+            <button type="button">Open in Jira</button>
+            <button type="button">Mark Resolved</button>
+          </div>
+        </aside>
+      </div>
+    </section>
+  );
+}
+
+// ── TechniciansPage ───────────────────────────────────────────────────────────
+
+function TechniciansPage() {
+  const [selectedTechId, setSelectedTechId] = useState(technicianDetails[0].id);
+
+  const selectedTech = technicianDetails.find((tech) => tech.id === selectedTechId) ?? technicianDetails[0];
+
+  const stats = useMemo(() => ({
+    online: technicianDetails.filter((tech) => tech.status === "Online").length,
+    offline: technicianDetails.filter((tech) => tech.status === "Offline").length,
+    pending: technicianDetails.filter((tech) => tech.status === "Pending").length,
+    totalScans: technicianDetails.reduce((sum, tech) => sum + tech.scansToday, 0)
+  }), []);
+
+  return (
+    <section className="system-page technicians-page">
+      <header className="system-hero">
+        <div>
+          <p>Field Team</p>
+          <h1>Technicians</h1>
+          <span>Live field technician status, task assignment, and activity tracking across all sites.</span>
+        </div>
+        <div className="system-hero-actions">
+          <button type="button">Add Technician</button>
+          <button type="button">Assign Task</button>
+        </div>
+      </header>
+
+      <section className="system-kpis">
+        <article>
+          <span>Online</span>
+          <strong>{stats.online}</strong>
+          <small>Active on site now</small>
+        </article>
+        <article className={stats.offline ? "warning" : ""}>
+          <span>Offline</span>
+          <strong>{stats.offline}</strong>
+          <small>Not syncing</small>
+        </article>
+        <article>
+          <span>Pending Sync</span>
+          <strong>{stats.pending}</strong>
+          <small>Awaiting connection</small>
+        </article>
+        <article>
+          <span>Scans Today</span>
+          <strong>{stats.totalScans}</strong>
+          <small>Across all technicians</small>
+        </article>
+      </section>
+
+      <div className="technicians-workspace">
+        <div className="tech-grid">
+          {technicianDetails.map((tech) => (
+            <button className={`tech-card ${selectedTechId === tech.id ? "selected" : ""}`} key={tech.id} onClick={() => setSelectedTechId(tech.id)} type="button">
+              <div className="tech-card-head">
+                <span className="avatar tech-avatar">{tech.initials}</span>
+                <div>
+                  <strong>{tech.name}</strong>
+                  <small>{tech.task}</small>
+                </div>
+                <StatusPill status={tech.status} label={tech.status} />
+              </div>
+              <div className="tech-card-meta">
+                <span><b>{tech.scansToday}</b><small>Scans</small></span>
+                <span><b>{tech.ticketsOpen}</b><small>Tickets</small></span>
+                <span><b>{tech.site}</b><small>Site</small></span>
+              </div>
+              <small className="tech-last-seen">Last seen: {tech.lastSeen}</small>
+            </button>
+          ))}
+        </div>
+
+        <aside className="ops-card tech-detail-panel">
+          <header>
+            <div className="tech-detail-header">
+              <span className="avatar tech-avatar-lg">{selectedTech.initials}</span>
+              <div>
+                <h2>{selectedTech.name}</h2>
+                <span>{selectedTech.task} / {selectedTech.site}</span>
+              </div>
+            </div>
+            <StatusPill status={selectedTech.status} label={selectedTech.status} />
+          </header>
+
+          <div className="tech-detail-grid">
+            <span><small>Email</small><b>{selectedTech.email}</b></span>
+            <span><small>Phone</small><b>{selectedTech.phone}</b></span>
+            <span><small>Site</small><b>{selectedTech.site}</b></span>
+            <span><small>Last Seen</small><b>{selectedTech.lastSeen}</b></span>
+            <span><small>Scans Today</small><b>{selectedTech.scansToday}</b></span>
+            <span><small>Open Tickets</small><b>{selectedTech.ticketsOpen}</b></span>
+          </div>
+
+          <section className="tech-activity">
+            <header>
+              <strong>Recent Activity</strong>
+            </header>
+            {selectedTech.recentActivity.map((item, index) => (
+              <article className="tech-activity-row" key={`${selectedTech.id}-${index}`}>
+                <span className={`tone-${item.tone}`}>●</span>
+                <div>
+                  <strong>{item.action}</strong>
+                  <small>{item.time}</small>
+                </div>
+              </article>
+            ))}
+          </section>
+
+          <div className="tech-actions">
+            <button type="button">Assign Task</button>
+            <button type="button">Send Message</button>
+            <button type="button">View Full Log</button>
+          </div>
+        </aside>
+      </div>
+    </section>
+  );
+}
+
+// ── MapPage ───────────────────────────────────────────────────────────────────
+
+function MapPage({ onNavigateToRacks }: { onNavigateToRacks: () => void }) {
+  const [selectedSite, setSelectedSite] = useState("DC1");
+  const [hoveredRack, setHoveredRack] = useState<RackRecord | null>(null);
+
+  const sites = useMemo(() => {
+    const siteMap: Record<string, Record<string, RackRecord[]>> = {};
+    for (const rack of rackFleet) {
+      if (!siteMap[rack.site]) siteMap[rack.site] = {};
+      if (!siteMap[rack.site][rack.room]) siteMap[rack.site][rack.room] = [];
+      siteMap[rack.site][rack.room].push(rack);
+    }
+    return siteMap;
+  }, []);
+
+  const siteStats = useMemo(() => {
+    const racks = rackFleet.filter((rack) => rack.site === selectedSite);
+    return {
+      total: racks.length,
+      critical: racks.filter((rack) => rack.health === "Critical").length,
+      warning: racks.filter((rack) => rack.health === "Warning").length,
+      devices: racks.reduce((sum, rack) => sum + rack.devices.length, 0),
+      power: racks.reduce((sum, rack) => sum + rack.powerKw, 0)
+    };
+  }, [selectedSite]);
+
+  const selectedSiteRooms = sites[selectedSite] ?? {};
+
+  return (
+    <section className="system-page map-page">
+      <header className="system-hero">
+        <div>
+          <p>Infrastructure</p>
+          <h1>Site Map</h1>
+          <span>Visual layout of datacenter sites, rooms, rows, and rack positions with live health overlay.</span>
+        </div>
+        <div className="system-hero-actions">
+          <button type="button">Export Layout</button>
+          <button type="button">Add Site</button>
+        </div>
+      </header>
+
+      <section className="system-kpis">
+        <article>
+          <span>Racks on Site</span>
+          <strong>{siteStats.total}</strong>
+          <small>{Object.keys(selectedSiteRooms).length} rooms</small>
+        </article>
+        <article className={siteStats.critical ? "warning" : ""}>
+          <span>Exceptions</span>
+          <strong>{siteStats.critical + siteStats.warning}</strong>
+          <small>{siteStats.critical} critical / {siteStats.warning} warning</small>
+        </article>
+        <article>
+          <span>Devices</span>
+          <strong>{siteStats.devices}</strong>
+          <small>QR-linked on this site</small>
+        </article>
+        <article>
+          <span>Power Load</span>
+          <strong>{siteStats.power.toFixed(1)} kW</strong>
+          <small>Total draw on site</small>
+        </article>
+      </section>
+
+      <div className="map-site-tabs">
+        {Object.keys(sites).map((site) => (
+          <button className={selectedSite === site ? "active" : ""} key={site} onClick={() => setSelectedSite(site)} type="button">{site}</button>
+        ))}
+      </div>
+
+      <div className="map-workspace">
+        <section className="ops-card map-floor-card">
+          <header>
+            <div>
+              <h2>{selectedSite} Floor Plan</h2>
+              <span>Click any rack to open its workspace in the Racks view</span>
+            </div>
+            <div className="map-topology-legend">
+              <span><i className="healthy" />Healthy</span>
+              <span><i className="warning" />Warning</span>
+              <span><i className="critical" />Critical</span>
+            </div>
+          </header>
+          <div className="map-rooms">
+            {Object.entries(selectedSiteRooms).map(([room, racks]) => (
+              <div className="map-room" key={room}>
+                <div className="map-room-label">
+                  <strong>{room}</strong>
+                  <span>{racks.length} racks</span>
+                </div>
+                <div className="map-rack-grid">
+                  {racks.map((rack) => (
+                    <button
+                      className={`map-rack ${rack.health.toLowerCase()}`}
+                      key={rack.id}
+                      onClick={onNavigateToRacks}
+                      onMouseEnter={() => setHoveredRack(rack)}
+                      onMouseLeave={() => setHoveredRack(null)}
+                      title={`${rack.name} / ${rack.health} / ${rack.powerKw.toFixed(1)} kW`}
+                      type="button"
+                    >
+                      <span>{rack.name.replace("RACK-", "")}</span>
+                      <small>{Math.round((rack.powerKw / rack.powerCapacityKw) * 100)}%</small>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <aside className="ops-card map-detail-panel">
+          <header>
+            <h2>{hoveredRack ? hoveredRack.name : "Hover a rack"}</h2>
+          </header>
+          {hoveredRack ? (
+            <>
+              <div className="map-rack-detail">
+                <span><small>Site</small><b>{hoveredRack.site}</b></span>
+                <span><small>Room</small><b>{hoveredRack.room}</b></span>
+                <span><small>Row</small><b>{hoveredRack.row}</b></span>
+                <span><small>Health</small><b><HealthBadge health={hoveredRack.health} /></b></span>
+                <span><small>Temperature</small><b>{hoveredRack.temperature}°C</b></span>
+                <span><small>Power</small><b>{hoveredRack.powerKw.toFixed(1)} / {hoveredRack.powerCapacityKw} kW</b></span>
+                <span><small>Devices</small><b>{hoveredRack.devices.length}</b></span>
+                <span><small>Cables</small><b>{hoveredRack.cableCount}</b></span>
+              </div>
+              <div className="map-device-list">
+                {hoveredRack.devices.map((device) => (
+                  <article key={device.id}>
+                    <span className={`device-led ${device.status.toLowerCase()}`} />
+                    <div>
+                      <strong>{device.hostname}</strong>
+                      <small>{device.kind} / U{device.startU}</small>
+                    </div>
+                    <em>{device.ip}</em>
+                  </article>
+                ))}
+              </div>
+              <button className="map-open-btn" onClick={onNavigateToRacks} type="button">Open in Racks View</button>
+            </>
+          ) : (
+            <div className="map-empty-detail">
+              <span>Hover over any rack on the floor plan to see live details and navigate to the rack workspace.</span>
+            </div>
+          )}
+        </aside>
+      </div>
+    </section>
+  );
+}
+
+// ── ReportsPage ───────────────────────────────────────────────────────────────
+
+function ReportsPage() {
+  const assetsByCategory = useMemo(() =>
+    assetCategories.map((category) => ({
+      category,
+      count: demoAssetInventory.filter((asset) => getAssetCategory(asset) === category).length,
+      active: demoAssetInventory.filter((asset) => getAssetCategory(asset) === category && (asset.status === "Active" || asset.status === "In Service")).length
+    })),
+  []);
+
+  const rackHealthSummary = useMemo(() => ({
+    healthy: rackFleet.filter((rack) => rack.health === "Healthy").length,
+    warning: rackFleet.filter((rack) => rack.health === "Warning").length,
+    critical: rackFleet.filter((rack) => rack.health === "Critical").length,
+    total: rackFleet.length
+  }), []);
+
+  const cableStockSummary = useMemo(() => ({
+    inStock: cableInventory.filter((item) => item.status === "In Stock").reduce((sum, item) => sum + item.quantity, 0),
+    lowStock: cableInventory.filter((item) => item.status === "Low Stock").length,
+    total: cableInventory.reduce((sum, item) => sum + item.quantity, 0)
+  }), []);
+
+  const auditSummary = useMemo(() => ({
+    total: auditLogEntries.length,
+    info: auditLogEntries.filter((entry) => entry.severity === "Info").length,
+    warning: auditLogEntries.filter((entry) => entry.severity === "Warning").length,
+    critical: auditLogEntries.filter((entry) => entry.severity === "Critical").length,
+    sources: new Set(auditLogEntries.map((entry) => entry.source)).size
+  }), []);
+
+  const maxAssets = Math.max(...assetsByCategory.map((group) => group.count), 1);
+
+  return (
+    <section className="system-page reports-page">
+      <header className="system-hero">
+        <div>
+          <p>Operations Intelligence</p>
+          <h1>Reports</h1>
+          <span>Aggregated asset, rack, cable, and audit data for operations review and export.</span>
+        </div>
+        <div className="system-hero-actions">
+          <button type="button">Export CSV</button>
+          <button type="button">Schedule Report</button>
+        </div>
+      </header>
+
+      <section className="system-kpis">
+        <article>
+          <span>Total Assets</span>
+          <strong>{demoAssetInventory.length}</strong>
+          <small>Across {new Set(demoAssetInventory.map((asset) => asset.site)).size} sites</small>
+        </article>
+        <article>
+          <span>Racks Monitored</span>
+          <strong>{rackFleet.length}</strong>
+          <small>{rackHealthSummary.critical} critical / {rackHealthSummary.warning} warning</small>
+        </article>
+        <article>
+          <span>Cable SKUs</span>
+          <strong>{cableInventory.length}</strong>
+          <small>{cableStockSummary.total.toLocaleString()} total units</small>
+        </article>
+        <article className={auditSummary.warning + auditSummary.critical > 0 ? "warning" : ""}>
+          <span>Audit Events</span>
+          <strong>{auditSummary.total}</strong>
+          <small>{auditSummary.warning} warnings / {auditSummary.critical} critical</small>
+        </article>
+      </section>
+
+      <div className="reports-grid">
+        <section className="ops-card report-card">
+          <header>
+            <h2>Asset Breakdown by Category</h2>
+            <button type="button">Export</button>
+          </header>
+          <div className="report-bar-chart">
+            {assetsByCategory.map((group) => (
+              <article key={group.category}>
+                <div>
+                  <div className="bar-label">
+                    <strong>{group.category}</strong>
+                    <span>{group.count} total / {group.active} active</span>
+                  </div>
+                  <div className="bar-track">
+                    <div className="bar-fill" style={{ width: `${(group.count / maxAssets) * 100}%` }} />
+                    <div className="bar-fill-active" style={{ width: `${(group.active / maxAssets) * 100}%` }} />
+                  </div>
+                </div>
+                <b>{group.count}</b>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="ops-card report-card">
+          <header>
+            <h2>Rack Health Distribution</h2>
+            <button type="button">Export</button>
+          </header>
+          <div className="report-donut-area">
+            <div className="report-health-bars">
+              {([
+                { label: "Healthy", count: rackHealthSummary.healthy, tone: "green" },
+                { label: "Warning", count: rackHealthSummary.warning, tone: "amber" },
+                { label: "Critical", count: rackHealthSummary.critical, tone: "red" }
+              ] as const).map((row) => (
+                <article key={row.label}>
+                  <div>
+                    <div className="bar-label">
+                      <strong className={`tone-${row.tone}`}>{row.label}</strong>
+                      <span>{row.count} racks</span>
+                    </div>
+                    <div className="bar-track">
+                      <div className={`bar-fill tone-bg-${row.tone}`} style={{ width: `${(row.count / rackHealthSummary.total) * 100}%` }} />
+                    </div>
+                  </div>
+                  <b>{Math.round((row.count / rackHealthSummary.total) * 100)}%</b>
+                </article>
+              ))}
+            </div>
+            <div className="report-totals">
+              <strong>{rackHealthSummary.total}</strong>
+              <span>Total racks monitored</span>
+            </div>
+          </div>
+        </section>
+
+        <section className="ops-card report-card">
+          <header>
+            <h2>Cable &amp; GBIC Stock Status</h2>
+            <button type="button">Export</button>
+          </header>
+          <div className="report-stock-grid">
+            {cableInventory.map((item) => (
+              <article className={item.status === "Low Stock" ? "stock-alert" : item.status === "Quarantine" ? "stock-quarantine" : ""} key={item.id}>
+                <div>
+                  <strong>{item.sku}</strong>
+                  <small>{item.vendor} / {item.connector}</small>
+                </div>
+                <div className="stock-qty">
+                  <b className={item.quantity < item.minimum ? "tone-red" : "tone-green"}>{item.quantity}</b>
+                  <small>min {item.minimum}</small>
+                </div>
+                <InventoryStatusBadge status={item.status} />
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section className="ops-card report-card">
+          <header>
+            <h2>Audit Log Summary</h2>
+            <button type="button">Export</button>
+          </header>
+          <div className="report-audit-summary">
+            <div className="report-audit-kpis">
+              <article><strong>{auditSummary.info}</strong><span>Info</span></article>
+              <article><strong className="tone-amber">{auditSummary.warning}</strong><span>Warnings</span></article>
+              <article><strong className="tone-red">{auditSummary.critical}</strong><span>Critical</span></article>
+              <article><strong>{auditSummary.sources}</strong><span>Sources</span></article>
+            </div>
+            <div className="audit-trail-preview">
+              {auditLogEntries.slice(0, 5).map((entry) => (
+                <article key={entry.id}>
+                  <AuditSeverityBadge severity={entry.severity} />
+                  <div>
+                    <strong>{entry.action}</strong>
+                    <small>{entry.actor} / {entry.source} / {entry.time}</small>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
       </div>
     </section>
   );
