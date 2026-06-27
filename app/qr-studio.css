@@ -803,6 +803,44 @@
   border-bottom-left-radius: 16px;
 }
 
+/* ── NFC status bar ── */
+.scanner-nfc-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 14px 10px;
+  padding: 9px 12px;
+  border-radius: 9px;
+  font-size: 0.78rem;
+  font-weight: 850;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--muted);
+}
+
+.scanner-nfc-bar.ready {
+  border-color: rgba(61, 220, 132, 0.4);
+  background: rgba(61, 220, 132, 0.08);
+  color: var(--green);
+}
+
+.scanner-nfc-bar.error {
+  border-color: rgba(250, 204, 21, 0.3);
+  background: rgba(250, 204, 21, 0.06);
+  color: var(--amber);
+}
+
+.nfc-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--green);
+  box-shadow: 0 0 8px var(--green);
+  animation: fiber-pulse 1.2s infinite;
+  flex-shrink: 0;
+}
+
 .scanner-status {
   display: grid;
   gap: 5px;

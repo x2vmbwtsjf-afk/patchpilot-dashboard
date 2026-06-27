@@ -1709,6 +1709,28 @@ export default function DashboardPage() {
   const [readNotifs, setReadNotifs] = useState<Set<number>>(new Set());
   const commandImportInputRef = useRef<HTMLInputElement | null>(null);
 
+  // ── Theme ──────────────────────────────────────────────────────────────────
+  const [theme, setTheme] = useState<"dark" | "light">(() => {
+    try { return (localStorage.getItem("pp_theme") as "dark" | "light") ?? "dark"; } catch { return "dark"; }
+  });
+  useEffect(() => {
+    document.documentElement.setAttribute("data-theme", theme);
+    try { localStorage.setItem("pp_theme", theme); } catch {}
+  }, [theme]);
+
+  // ── User profile (persisted) ───────────────────────────────────────────────
+  const [userProfile, setUserProfile] = useState<{ name: string; role: string; site: string; email: string }>(() => {
+    try {
+      const saved = localStorage.getItem("pp_profile");
+      return saved ? (JSON.parse(saved) as { name: string; role: string; site: string; email: string }) : { name: "Alan H.", role: "DC Engineer", site: "DC1", email: "" };
+    } catch { return { name: "Alan H.", role: "DC Engineer", site: "DC1", email: "" }; }
+  });
+  function updateUserProfile(profile: typeof userProfile) {
+    setUserProfile(profile);
+    try { localStorage.setItem("pp_profile", JSON.stringify(profile)); } catch {}
+  }
+  const userInitials = userProfile.name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2);
+
   const notifications = [
     { id: 1, severity: "critical" as Tone, title: "Rack DC1-R04 overheating", detail: "Temp 42°C — exceeds 40°C threshold", time: "2m ago" },
     { id: 2, severity: "amber"    as Tone, title: "Fiber validation failed", detail: "Port SFP-12 signal below threshold on DC2", time: "18m ago" },
@@ -1997,6 +2019,11 @@ export default function DashboardPage() {
                 <span className="online-dot" />
                 <strong>Online</strong>
 
+                {/* ── Theme toggle ── */}
+                <button className="theme-toggle" onClick={() => setTheme((t) => t === "dark" ? "light" : "dark")} type="button" title="Toggle light/dark">
+                  {theme === "dark" ? "☀" : "☾"}
+                </button>
+
                 {/* ── Notifications bell ── */}
                 <div className="topbar-dropdown-wrap">
                   <button className="bell" onClick={() => { setIsNotifOpen((v) => !v); setIsHelpOpen(false); }} type="button">
@@ -2053,10 +2080,10 @@ export default function DashboardPage() {
                 </div>
 
                 <div className="user-chip">
-                  <span>DM</span>
+                  <span>{userInitials}</span>
                   <div>
-                    <strong>David M.</strong>
-                    <small>Operations Lead</small>
+                    <strong>{userProfile.name}</strong>
+                    <small>{userProfile.role}{userProfile.site ? ` · ${userProfile.site}` : ""}</small>
                   </div>
                 </div>
               </div>
@@ -2094,7 +2121,12 @@ export default function DashboardPage() {
         ) : activeNav === "Reports" ? (
           <ReportsPage />
         ) : activeNav === "Settings" ? (
-          <SettingsPage />
+          <SettingsPage
+            theme={theme}
+            onToggleTheme={() => setTheme((t) => t === "dark" ? "light" : "dark")}
+            userProfile={userProfile}
+            onUpdateProfile={updateUserProfile}
+          />
         ) : activeNav === "Integrations" ? (
           <IntegrationsPage />
         ) : activeNav === "Audit Logs" ? (
@@ -2125,15 +2157,6 @@ export default function DashboardPage() {
                     <strong>Import Assets</strong>
                     <span>Upload Excel / CSV</span>
                   </button>
-                </div>
-                <div className="qr-command-stats">
-                  {qrCommandStats.map((stat) => (
-                    <article key={stat.label}>
-                      <span>{stat.label}</span>
-                      <strong>{stat.value}</strong>
-                      <small>{stat.detail}</small>
-                    </article>
-                  ))}
                 </div>
               </section>
 
@@ -2261,16 +2284,25 @@ export default function DashboardPage() {
   );
 }
 
-function SettingsPage() {
-  type SettingsTab = "General" | "Scanner" | "Database" | "Security" | "Deployment";
-  const [activeTab, setActiveTab] = useState<SettingsTab>("General");
+function SettingsPage({
+  theme, onToggleTheme, userProfile, onUpdateProfile,
+}: {
+  theme: "dark" | "light";
+  onToggleTheme: () => void;
+  userProfile: { name: string; role: string; site: string; email: string };
+  onUpdateProfile: (p: { name: string; role: string; site: string; email: string }) => void;
+}) {
+  type SettingsTab = "Profile" | "Notifications" | "Data" | "General" | "Scanner" | "Database" | "Security" | "Deployment";
+  const [activeTab, setActiveTab] = useState<SettingsTab>("Profile");
   const [assetIdPrefix, setAssetIdPrefix] = useState("PP-");
   const [labelSize, setLabelSize] = useState("50mm");
   const [qrErrorLevel, setQrErrorLevel] = useState("M");
   const [qrMargin, setQrMargin] = useState("1");
   const [scanThrottle, setScanThrottle] = useState("180");
   const [unknownQrFlow, setUnknownQrFlow] = useState("confirm");
-  const [rfidEnabled, setRfidEnabled] = useState(false);
+  const [rfidEnabled, setRfidEnabled] = useState(() => {
+    try { return localStorage.getItem("pp_nfc") === "true"; } catch { return false; }
+  });
   const [requireScanConfirm, setRequireScanConfirm] = useState(true);
   const [offlineDb, setOfflineDb] = useState(true);
   const [autoMapHeaders, setAutoMapHeaders] = useState(true);
@@ -2292,9 +2324,57 @@ function SettingsPage() {
     setTimeout(() => setSaveStatus("idle"), 3500);
   }
 
+  // ── Profile (local edit copy) ──────────────────────────────────────────────
+  const [profileDraft, setProfileDraft] = useState({ ...userProfile });
+  const profileDirty = JSON.stringify(profileDraft) !== JSON.stringify(userProfile);
+
+  // ── Notifications ──────────────────────────────────────────────────────────
+  const [notifCritical,  setNotifCritical]  = useState(true);
+  const [notifWarning,   setNotifWarning]   = useState(true);
+  const [notifInfo,      setNotifInfo]      = useState(false);
+  const [notifChannel,   setNotifChannel]   = useState("dashboard");
+  const [teamsWebhook,   setTeamsWebhook]   = useState("");
+
+  // ── Data ───────────────────────────────────────────────────────────────────
+  const [clearConfirm,   setClearConfirm]   = useState(false);
+  const [exportMsg,      setExportMsg]      = useState("");
+
+  function exportAssetsCSV() {
+    try {
+      const request = indexedDB.open("patchpilot_operations", 1);
+      request.onsuccess = () => {
+        const db = request.result;
+        const tx = db.transaction("assets", "readonly");
+        const store = tx.objectStore("assets");
+        const all = store.getAll();
+        all.onsuccess = () => {
+          const rows = all.result as Record<string, string>[];
+          if (!rows.length) { setExportMsg("No assets in local DB to export."); return; }
+          const headers = Object.keys(rows[0]);
+          const csv = [headers.join(","), ...rows.map((r) => headers.map((h) => JSON.stringify(r[h] ?? "")).join(","))].join("\n");
+          const blob = new Blob([csv], { type: "text/csv" });
+          const url  = URL.createObjectURL(blob);
+          const a    = document.createElement("a");
+          a.href = url; a.download = `patchpilot-assets-${new Date().toISOString().slice(0, 10)}.csv`; a.click();
+          URL.revokeObjectURL(url);
+          setExportMsg(`Exported ${rows.length} assets.`);
+        };
+      };
+      request.onerror = () => setExportMsg("Could not open local DB.");
+    } catch { setExportMsg("Export failed."); }
+  }
+
+  function clearLocalDB() {
+    try {
+      const req = indexedDB.deleteDatabase("patchpilot_operations");
+      req.onsuccess = () => { setClearConfirm(false); setExportMsg("Local DB cleared. Reload the page to reinitialize."); };
+      req.onerror   = () => setExportMsg("Failed to clear DB.");
+    } catch { setExportMsg("Clear failed."); }
+  }
+
   const needsSetup = supabaseEnabled && !supabaseUrl ? 1 : 0;
   const enabledCount = [offlineDb, autoMapHeaders, allowCsvExport, requireScanConfirm].filter(Boolean).length + 3;
-  const tabs: SettingsTab[] = ["General", "Scanner", "Database", "Security", "Deployment"];
+  const tabs: SettingsTab[] = ["Profile", "Notifications", "Data", "General", "Scanner", "Database", "Security", "Deployment"];
 
   return (
     <section className="system-page settings-page">
@@ -2343,8 +2423,178 @@ function SettingsPage() {
       </nav>
 
       <div className="settings-body">
+
+        {/* ── Profile ── */}
+        {activeTab === "Profile" && (
+          <div className="settings-tab-cols">
+            <section className="ops-card settings-card">
+              <header><h2>User Profile</h2></header>
+              <div className="settings-fields">
+                <div className="settings-row">
+                  <div><strong>Full Name</strong><span>Displayed in topbar and audit logs</span></div>
+                  <input className="settings-input" value={profileDraft.name} onChange={(e) => setProfileDraft((p) => ({ ...p, name: e.target.value }))} placeholder="Your name" />
+                </div>
+                <div className="settings-row">
+                  <div><strong>Role / Title</strong><span>Shown under your name in the topbar</span></div>
+                  <input className="settings-input" value={profileDraft.role} onChange={(e) => setProfileDraft((p) => ({ ...p, role: e.target.value }))} placeholder="e.g. DC Engineer" />
+                </div>
+                <div className="settings-row">
+                  <div><strong>Primary Site</strong><span>Default datacenter for new assets and filters</span></div>
+                  <select className="settings-select" value={profileDraft.site} onChange={(e) => setProfileDraft((p) => ({ ...p, site: e.target.value }))}>
+                    <option value="DC1">DC1</option>
+                    <option value="DC2">DC2</option>
+                    <option value="DC3">DC3</option>
+                    <option value="All">All Sites</option>
+                  </select>
+                </div>
+                <div className="settings-row">
+                  <div><strong>Email</strong><span>Used for notification routing if Teams is not connected</span></div>
+                  <input className="settings-input" value={profileDraft.email} onChange={(e) => setProfileDraft((p) => ({ ...p, email: e.target.value }))} placeholder="you@company.com" type="email" />
+                </div>
+              </div>
+              <div className="settings-test-row">
+                <button
+                  className="settings-test-btn"
+                  disabled={!profileDirty}
+                  onClick={() => { onUpdateProfile(profileDraft); markDirty(); }}
+                  type="button"
+                >
+                  {profileDirty ? "Apply Changes" : "Up to date ✓"}
+                </button>
+                {profileDirty && <small>Changes will update the topbar immediately.</small>}
+              </div>
+            </section>
+
+            <section className="ops-card settings-card">
+              <header><h2>Avatar Preview</h2></header>
+              <div className="profile-avatar-preview">
+                <div className="profile-avatar-big">
+                  {profileDraft.name.split(" ").map((w) => w[0]).join("").toUpperCase().slice(0, 2) || "??"}
+                </div>
+                <strong>{profileDraft.name || "Your Name"}</strong>
+                <span>{profileDraft.role || "Role"}{profileDraft.site ? ` · ${profileDraft.site}` : ""}</span>
+                <small>{profileDraft.email || "No email set"}</small>
+              </div>
+            </section>
+          </div>
+        )}
+
+        {/* ── Notifications ── */}
+        {activeTab === "Notifications" && (
+          <div className="settings-tab-cols">
+            <section className="ops-card settings-card">
+              <header><h2>Alert Types</h2></header>
+              <div className="settings-fields">
+                <div className="settings-row">
+                  <div><strong>Critical Alerts</strong><span>Overheating, offline racks, fiber failures — always on</span></div>
+                  <SettingsToggle checked={notifCritical} onChange={(v) => { setNotifCritical(v); markDirty(); }} />
+                </div>
+                <div className="settings-row">
+                  <div><strong>Warnings</strong><span>Missing QR labels, validation issues, sync delays</span></div>
+                  <SettingsToggle checked={notifWarning} onChange={(v) => { setNotifWarning(v); markDirty(); }} />
+                </div>
+                <div className="settings-row">
+                  <div><strong>Info &amp; Activity</strong><span>Completed imports, scans, work order updates</span></div>
+                  <SettingsToggle checked={notifInfo} onChange={(v) => { setNotifInfo(v); markDirty(); }} />
+                </div>
+              </div>
+            </section>
+
+            <section className="ops-card settings-card">
+              <header><h2>Delivery Channel</h2></header>
+              <div className="settings-fields">
+                <div className="settings-row">
+                  <div><strong>Notification Channel</strong><span>Where to send alerts outside the dashboard</span></div>
+                  <select className="settings-select" value={notifChannel} onChange={(e) => { setNotifChannel(e.target.value); markDirty(); }}>
+                    <option value="dashboard">Dashboard only</option>
+                    <option value="teams">Microsoft Teams</option>
+                    <option value="email">Email</option>
+                    <option value="both">Teams + Email</option>
+                  </select>
+                </div>
+                {(notifChannel === "teams" || notifChannel === "both") && (
+                  <div className="settings-row">
+                    <div><strong>Teams Webhook URL</strong><span>Incoming webhook from your Teams channel connector</span></div>
+                    <input className="settings-input" value={teamsWebhook} onChange={(e) => { setTeamsWebhook(e.target.value); markDirty(); }} placeholder="https://outlook.office.com/webhook/…" />
+                  </div>
+                )}
+                {(notifChannel === "email" || notifChannel === "both") && (
+                  <div className="settings-row">
+                    <div><strong>Email recipient</strong><span>Pulled from your profile — update in Profile tab</span></div>
+                    <input className="settings-input" value={userProfile.email || ""} disabled placeholder="Set email in Profile tab" />
+                  </div>
+                )}
+              </div>
+            </section>
+          </div>
+        )}
+
+        {/* ── Data ── */}
+        {activeTab === "Data" && (
+          <div className="settings-tab-cols">
+            <section className="ops-card settings-card">
+              <header><h2>Export</h2></header>
+              <div className="settings-fields">
+                <div className="settings-row">
+                  <div><strong>Export Assets CSV</strong><span>Download all assets from local IndexedDB as a CSV file</span></div>
+                  <button className="settings-test-btn" onClick={exportAssetsCSV} type="button">Download CSV</button>
+                </div>
+                <div className="settings-row">
+                  <div><strong>Export Audit Log</strong><span>Download current audit log session as CSV</span></div>
+                  <button className="settings-test-btn" onClick={() => {
+                    const csv = ["id,actor,action,target,time,severity", ...auditEvents.map((e) => `${e.id},${e.actor},${e.action},${e.target},${e.time},${e.severity}`)].join("\n");
+                    const blob = new Blob([csv], { type: "text/csv" });
+                    const url = URL.createObjectURL(blob);
+                    const a = document.createElement("a"); a.href = url; a.download = "patchpilot-audit.csv"; a.click();
+                    URL.revokeObjectURL(url);
+                    setExportMsg("Audit log exported.");
+                  }} type="button">Download Audit CSV</button>
+                </div>
+              </div>
+              {exportMsg && <p className="settings-export-msg">{exportMsg}</p>}
+            </section>
+
+            <section className="ops-card settings-card">
+              <header><h2>Local Database</h2></header>
+              <div className="settings-fields">
+                <div className="settings-row">
+                  <div><strong>Clear Local DB</strong><span>Deletes all assets saved in browser IndexedDB — irreversible</span></div>
+                  {clearConfirm ? (
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button className="settings-test-btn" style={{ borderColor: "var(--red)", color: "var(--red)" }} onClick={clearLocalDB} type="button">Confirm Delete</button>
+                      <button className="settings-test-btn" onClick={() => setClearConfirm(false)} type="button">Cancel</button>
+                    </div>
+                  ) : (
+                    <button className="settings-test-btn" style={{ borderColor: "var(--red)", color: "var(--red)" }} onClick={() => setClearConfirm(true)} type="button">Clear DB…</button>
+                  )}
+                </div>
+                <div className="settings-row">
+                  <div><strong>Clear Preferences</strong><span>Reset theme, profile, and notification settings to defaults</span></div>
+                  <button className="settings-test-btn" onClick={() => {
+                    try { localStorage.removeItem("pp_theme"); localStorage.removeItem("pp_profile"); } catch {}
+                    setExportMsg("Preferences cleared — reload to apply.");
+                  }} type="button">Reset Prefs</button>
+                </div>
+              </div>
+              {exportMsg && <p className="settings-export-msg">{exportMsg}</p>}
+            </section>
+          </div>
+        )}
+
         {activeTab === "General" && (
           <div className="settings-tab-cols">
+            <section className="ops-card settings-card">
+              <header><h2>Appearance</h2></header>
+              <div className="settings-fields">
+                <div className="settings-row">
+                  <div><strong>Color Mode</strong><span>Switch between dark (default) and light interface</span></div>
+                  <button className="theme-mode-btn" onClick={onToggleTheme} type="button">
+                    {theme === "dark" ? "☀  Switch to Light" : "☾  Switch to Dark"}
+                  </button>
+                </div>
+              </div>
+            </section>
+
             <section className="ops-card settings-card">
               <header><h2>Identity &amp; Labels</h2></header>
               <div className="settings-fields">
@@ -2410,8 +2660,8 @@ function SettingsPage() {
                   <SettingsToggle checked={requireScanConfirm} onChange={(v) => { setRequireScanConfirm(v); markDirty(); }} />
                 </div>
                 <div className="settings-row">
-                  <div><strong>RFID Reader Support</strong><span>Enable RFID tag lookup alongside QR scanning</span></div>
-                  <SettingsToggle checked={rfidEnabled} onChange={(v) => { setRfidEnabled(v); markDirty(); }} />
+                  <div><strong>NFC Tag Support</strong><span>Read NFC stickers on assets — hold phone near tag instead of scanning QR (Android Chrome + iOS 14+)</span></div>
+                  <SettingsToggle checked={rfidEnabled} onChange={(v) => { setRfidEnabled(v); try { localStorage.setItem("pp_nfc", String(v)); } catch {} markDirty(); }} />
                 </div>
               </div>
             </section>
@@ -3718,7 +3968,7 @@ function InventoryStatusBadge({ status }: { status: CableInventoryStatus }) {
 function QRScanModal({
   message,
   onClose,
-  onResolved
+  onResolved,
 }: {
   message: string;
   onClose: () => void;
@@ -3732,6 +3982,62 @@ function QRScanModal({
   const lastScanRef = useRef(0);
   const [manualValue, setManualValue] = useState("");
   const [scannerStatus, setScannerStatus] = useState("Starting camera...");
+  const [nfcStatus, setNfcStatus] = useState<"off" | "ready" | "error">("off");
+
+  // ── NFC (Web NFC API — Chrome/Android + iOS 14+) ──────────────────────────
+  const nfcEnabled = (() => { try { return localStorage.getItem("pp_nfc") === "true"; } catch { return false; } })();
+
+  useEffect(() => {
+    if (!nfcEnabled) return;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const NDEFReader = (window as any).NDEFReader as (new () => {
+      scan: () => Promise<void>;
+      addEventListener: (event: string, cb: (e: { message: { records: Array<{ recordType: string; data: ArrayBuffer; mediaType?: string }> }; serialNumber: string }) => void) => void;
+    }) | undefined;
+
+    if (!NDEFReader) {
+      setNfcStatus("error");
+      return;
+    }
+
+    let abortController: AbortController | null = null;
+
+    async function startNFC() {
+      try {
+        abortController = new AbortController();
+        const reader = new NDEFReader!();
+        await reader.scan();
+        setNfcStatus("ready");
+
+        reader.addEventListener("reading", ({ message, serialNumber }) => {
+          if (isResolvedRef.current) return;
+          // Try to find a URL or text record with PatchPilot payload
+          for (const record of message.records) {
+            const decoder = new TextDecoder();
+            let value = "";
+            if (record.recordType === "url" || record.recordType === "text") {
+              value = decoder.decode(record.data);
+            } else if (record.recordType === "mime" && record.mediaType === "text/plain") {
+              value = decoder.decode(record.data);
+            }
+            if (!value) value = serialNumber; // fallback: use tag UID as asset ID
+            if (value) {
+              isResolvedRef.current = true;
+              onResolved(value);
+              return;
+            }
+          }
+          // fallback: serial number
+          if (serialNumber) { isResolvedRef.current = true; onResolved(serialNumber); }
+        });
+      } catch {
+        setNfcStatus("error");
+      }
+    }
+
+    void startNFC();
+    return () => { abortController?.abort(); };
+  }, [nfcEnabled, onResolved]);
 
   useEffect(() => {
     let isMounted = true;
@@ -3860,11 +4166,20 @@ function QRScanModal({
         <header>
           <div>
             <p>PatchPilot Scanner</p>
-            <h2>Scan QR</h2>
+            <h2>Scan QR{nfcEnabled ? " / NFC" : ""}</h2>
             <span>{message}</span>
           </div>
           <button onClick={onClose} type="button">Close</button>
         </header>
+
+        {/* NFC status bar */}
+        {nfcEnabled && (
+          <div className={`scanner-nfc-bar ${nfcStatus}`}>
+            {nfcStatus === "ready" && <><span className="nfc-dot" />📡 NFC ready — hold phone near asset tag</>}
+            {nfcStatus === "error" && <>⚠ NFC not available in this browser — use QR scan below</>}
+            {nfcStatus === "off"   && <>⏳ Starting NFC…</>}
+          </div>
+        )}
 
         <div className="scanner-camera">
           <video ref={videoRef} muted playsInline />
@@ -3879,11 +4194,11 @@ function QRScanModal({
 
         <div className="scanner-status">
           <strong>{scannerStatus}</strong>
-          <small>Supported values: PP-000128, patchpilot://asset/PP-000128, or https://app.patchpilot.io/a/PP-000128</small>
+          <small>Supported: PP-000128 · patchpilot://asset/PP-000128 · NFC tag with same payload</small>
         </div>
 
         <form className="scanner-manual" onSubmit={submitManualValue}>
-          <input value={manualValue} onChange={(event) => setManualValue(event.target.value)} placeholder="Enter QR ID manually..." />
+          <input value={manualValue} onChange={(event) => setManualValue(event.target.value)} placeholder="Enter QR ID or asset ID manually..." />
           <button type="submit">Open Asset</button>
         </form>
       </section>
