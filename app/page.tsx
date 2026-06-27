@@ -2020,9 +2020,9 @@ export default function DashboardPage() {
                     <strong>Create Label</strong>
                     <span>New QR asset</span>
                   </button>
-                  <button onClick={() => handleQuickAction(quickActions[3])} type="button">
-                    <strong>Rack Audit</strong>
-                    <span>Review rack workspace</span>
+                  <button onClick={() => handleQuickAction(quickActions[5])} type="button">
+                    <strong>Validate Fiber</strong>
+                    <span>Run signal test</span>
                   </button>
                   <button onClick={() => handleQuickAction(quickActions[2])} type="button">
                     <strong>Import Assets</strong>
