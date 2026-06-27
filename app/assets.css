@@ -771,6 +771,55 @@
   white-space: nowrap;
 }
 
+/* ── Qty editor ──────────────────────────────────────────────────────────── */
+.inv-qty-editor {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.inv-qty-btn {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid rgba(148,163,184,0.22);
+  border-radius: 6px;
+  background: rgba(255,255,255,0.05);
+  color: #c9d7e8;
+  font-size: 1rem;
+  font-weight: 700;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+}
+.inv-qty-btn:hover {
+  border-color: rgba(34,211,238,0.4);
+  background: rgba(34,211,238,0.1);
+  color: #9ff3ff;
+}
+
+.inv-qty-input {
+  width: 52px;
+  height: 26px;
+  border: 1px solid rgba(148,163,184,0.22);
+  border-radius: 6px;
+  padding: 0 6px;
+  background: rgba(7,17,29,0.7);
+  color: #eef6ff;
+  font-size: 0.85rem;
+  font-weight: 850;
+  text-align: center;
+  outline: none;
+  -moz-appearance: textfield;
+}
+.inv-qty-input::-webkit-inner-spin-button,
+.inv-qty-input::-webkit-outer-spin-button { -webkit-appearance: none; }
+.inv-qty-input:focus {
+  border-color: rgba(34,211,238,0.5);
+}
+
 /* ── Unit list (drill-down) ──────────────────────────────────────────────── */
 .inv-unit-list {
   display: grid;

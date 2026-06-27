@@ -68,10 +68,12 @@ type IntegrationProvider = {
   name: string;
   icon: string;
   category: string;
+  group: "Identity" | "Service Desk" | "Monitoring" | "Messaging" | "Database";
   detail: string;
   status: "Not Connected" | "Ready to Connect" | "Planned";
   fields: string[];
   nextStep: string;
+  enables: string[];
 };
 
 type AuditLogEntry = {
@@ -318,40 +320,125 @@ const settingsControls: SettingsControl[] = [
 
 const integrationProviders: IntegrationProvider[] = [
   {
-    name: "Supabase",
-    icon: "SB",
-    category: "Database",
-    detail: "Central asset registry, auth, audit storage, and realtime sync.",
+    name: "Azure AD / Entra ID",
+    icon: "AZ",
+    category: "Identity Provider",
+    group: "Identity",
+    detail: "SSO login with your org Microsoft account. User name, role, and site pulled automatically from the directory.",
     status: "Ready to Connect",
-    fields: ["Project URL", "Anon key", "assets table", "audit_events table"],
-    nextStep: "Add env vars and map AssetRecord fields to Postgres."
+    fields: ["Tenant ID", "Client ID", "Client Secret", "Redirect URI"],
+    nextStep: "Register PatchPilot as an App Registration in Azure → API permissions → User.Read. Users will log in with their org credentials.",
+    enables: ["Single Sign-On", "Auto user profile", "Role sync from AD groups", "Audit actor identity"]
+  },
+  {
+    name: "Okta",
+    icon: "OK",
+    category: "Identity Provider",
+    group: "Identity",
+    detail: "Okta SSO for organizations not on Microsoft. SAML or OIDC, group-based role assignment.",
+    status: "Planned",
+    fields: ["Okta domain", "Client ID", "Client Secret", "SAML metadata URL"],
+    nextStep: "Create Okta OIDC application, map group claims to PatchPilot roles.",
+    enables: ["SSO via Okta", "Group → role mapping", "MFA enforcement"]
   },
   {
     name: "ServiceNow",
     icon: "SN",
     category: "Service Desk",
-    detail: "Create or link incidents, tasks, and CMDB records from QR scans.",
+    group: "Service Desk",
+    detail: "Create incidents, tasks, and CMDB CI records directly from QR scans, rack audits, or fiber failures.",
     status: "Ready to Connect",
-    fields: ["Instance URL", "Client ID", "Client Secret", "Assignment group"],
-    nextStep: "Connect OAuth and define ticket templates."
+    fields: ["Instance URL", "Client ID", "Client Secret", "Assignment group", "CMDB table"],
+    nextStep: "Enable OAuth 2.0 in ServiceNow → set up PatchPilot as an OAuth client → map asset fields to CI attributes.",
+    enables: ["Open incident from QR scan", "Link asset to CMDB CI", "Rack audit → change request", "Fiber failure → P2 incident"]
   },
   {
-    name: "Jira",
+    name: "Jira / JSM",
     icon: "JR",
     category: "Service Desk",
-    detail: "Open Jira or JSM requests from assets, rack audits, and fiber tests.",
+    group: "Service Desk",
+    detail: "Open Jira Software or JSM requests from assets, rack audits, and cable validations. Full field mapping.",
     status: "Ready to Connect",
-    fields: ["Site URL", "Project key", "Issue type", "API token"],
-    nextStep: "Choose project defaults and field mapping."
+    fields: ["Site URL", "Project key", "Issue type", "API token", "Default assignee"],
+    nextStep: "Generate API token in Atlassian account settings → set project key and default issue type for DC operations.",
+    enables: ["Create ticket from asset page", "JSM service request from scan", "Fiber test failure → bug/task", "Link QR ID to Jira issue"]
   },
   {
-    name: "Other",
-    icon: "OT",
-    category: "Webhook",
-    detail: "Generic outbound webhook for custom NOC, ERP, or automation systems.",
+    name: "Freshservice",
+    icon: "FS",
+    category: "Service Desk",
+    group: "Service Desk",
+    detail: "ITSM ticketing via Freshservice API. Auto-populate asset details into new tickets.",
     status: "Planned",
-    fields: ["Webhook URL", "Shared secret", "Payload template"],
-    nextStep: "Define signed JSON payload and retry policy."
+    fields: ["Domain", "API key", "Group ID", "Requester email"],
+    nextStep: "Get API key from Freshservice profile → map asset fields to ticket custom fields.",
+    enables: ["Open ticket from scan", "Asset info auto-fill", "Rack audit change ticket"]
+  },
+  {
+    name: "Microsoft Teams",
+    icon: "MS",
+    category: "Messaging",
+    group: "Messaging",
+    detail: "Post alerts, scan events, and fiber results to Teams channels. Adaptive Cards with deep links back into PatchPilot.",
+    status: "Ready to Connect",
+    fields: ["Incoming Webhook URL", "Channel name", "Alert severity threshold", "Mention user (optional)"],
+    nextStep: "In Teams → channel → Connectors → Incoming Webhook → copy URL → paste here. Optionally restrict to Critical/Warning events only.",
+    enables: ["Critical alert → Teams card", "Fiber failure notification", "Daily rack health digest", "Scan event feed"]
+  },
+  {
+    name: "Slack",
+    icon: "SL",
+    category: "Messaging",
+    group: "Messaging",
+    detail: "Send DC operation events to Slack channels using Incoming Webhooks or Slack Apps.",
+    status: "Planned",
+    fields: ["Webhook URL", "Channel", "Bot token (optional)", "Event types"],
+    nextStep: "Create a Slack App at api.slack.com → enable Incoming Webhooks → copy webhook URL.",
+    enables: ["Alert → #dc-ops channel", "Scan events", "Daily digest", "@mention on critical"]
+  },
+  {
+    name: "Zabbix",
+    icon: "ZB",
+    category: "Network Monitoring",
+    group: "Monitoring",
+    detail: "Pull live host status and trigger alerts from Zabbix into PatchPilot rack view. Show device health alongside physical location.",
+    status: "Ready to Connect",
+    fields: ["Zabbix API URL", "API token", "Host group filter", "Trigger severity threshold"],
+    nextStep: "Zabbix 6.x+ → User → API tokens → generate token with read access → enter URL and token here.",
+    enables: ["Live host status in rack view", "Zabbix trigger → PatchPilot alert", "Correlate physical rack with monitoring", "SNMP device map"]
+  },
+  {
+    name: "PRTG",
+    icon: "PR",
+    category: "Network Monitoring",
+    group: "Monitoring",
+    detail: "Pull sensor status from PRTG into rack and asset views. Map PRTG device IDs to PatchPilot asset IDs.",
+    status: "Planned",
+    fields: ["PRTG server URL", "API passhash", "Device group ID"],
+    nextStep: "PRTG → Setup → API → enable REST API → generate passhash for read-only user.",
+    enables: ["PRTG sensor status in assets", "Alert overlay on rack view", "Bandwidth stats per port"]
+  },
+  {
+    name: "Supabase",
+    icon: "SB",
+    category: "Cloud Database",
+    group: "Database",
+    detail: "Central cloud backend — asset registry, user auth, audit log storage, and realtime sync across all field devices.",
+    status: "Ready to Connect",
+    fields: ["Project URL", "Anon key", "Service role key", "Assets table", "Audit events table"],
+    nextStep: "Create a Supabase project → copy URL and keys from Settings → API. Run the PatchPilot schema migration to create required tables.",
+    enables: ["Multi-device cloud sync", "Realtime asset updates", "Cloud audit log", "Supabase Auth SSO option"]
+  },
+  {
+    name: "Custom Webhook",
+    icon: "WH",
+    category: "Webhook / API",
+    group: "Database",
+    detail: "Generic outbound webhook for custom NOC, ERP, BMS, or automation platforms. Signed JSON payload.",
+    status: "Ready to Connect",
+    fields: ["Endpoint URL", "Shared secret", "Event types", "Payload format"],
+    nextStep: "Provide a POST endpoint that accepts JSON. PatchPilot will sign payloads with HMAC-SHA256 using the shared secret.",
+    enables: ["Custom ERP integration", "BMS / DCIM bridge", "NOC automation trigger", "Custom alert routing"]
   }
 ];
 
@@ -1722,8 +1809,8 @@ export default function DashboardPage() {
   const [userProfile, setUserProfile] = useState<{ name: string; role: string; site: string; email: string }>(() => {
     try {
       const saved = localStorage.getItem("pp_profile");
-      return saved ? (JSON.parse(saved) as { name: string; role: string; site: string; email: string }) : { name: "Alan H.", role: "DC Engineer", site: "DC1", email: "" };
-    } catch { return { name: "Alan H.", role: "DC Engineer", site: "DC1", email: "" }; }
+      return saved ? (JSON.parse(saved) as { name: string; role: string; site: string; email: string }) : { name: "Operator", role: "DC Engineer", site: "DC1", email: "" };
+    } catch { return { name: "Operator", role: "DC Engineer", site: "DC1", email: "" }; }
   });
   function updateUserProfile(profile: typeof userProfile) {
     setUserProfile(profile);
@@ -2775,29 +2862,55 @@ function SettingsPage({
   );
 }
 
+type IntGroup = "All" | "Identity" | "Service Desk" | "Monitoring" | "Messaging" | "Database";
+
 function IntegrationsPage() {
+  const [activeGroup, setActiveGroup] = useState<IntGroup>("All");
   const [configuringId, setConfiguringId] = useState<string | null>(null);
   const [testStatus, setTestStatus] = useState<Record<string, "idle" | "testing" | "ok" | "error">>({});
-  const [fieldValues, setFieldValues] = useState<Record<string, Record<string, string>>>({});
-  const [connectedIds, setConnectedIds] = useState<Set<string>>(new Set());
+  const [fieldValues, setFieldValues] = useState<Record<string, Record<string, string>>>(() => {
+    try { const s = localStorage.getItem("pp_int_fields"); return s ? JSON.parse(s) : {}; } catch { return {}; }
+  });
+  const [connectedIds, setConnectedIds] = useState<Set<string>>(() => {
+    try { const s = localStorage.getItem("pp_int_connected"); return s ? new Set(JSON.parse(s)) : new Set(); } catch { return new Set(); }
+  });
 
   function updateField(name: string, field: string, value: string) {
-    setFieldValues((prev) => ({ ...prev, [name]: { ...(prev[name] ?? {}), [field]: value } }));
+    setFieldValues((prev) => {
+      const next = { ...prev, [name]: { ...(prev[name] ?? {}), [field]: value } };
+      try { localStorage.setItem("pp_int_fields", JSON.stringify(next)); } catch {}
+      return next;
+    });
   }
   function testConnection(name: string) {
     setTestStatus((prev) => ({ ...prev, [name]: "testing" }));
     setTimeout(() => {
       const hasVals = Object.values(fieldValues[name] ?? {}).some((v) => v.trim());
       setTestStatus((prev) => ({ ...prev, [name]: hasVals ? "ok" : "error" }));
-    }, 1200);
+    }, 1400);
   }
   function saveConnection(name: string) {
-    setConnectedIds((prev) => new Set([...prev, name]));
+    setConnectedIds((prev) => {
+      const next = new Set([...prev, name]);
+      try { localStorage.setItem("pp_int_connected", JSON.stringify([...next])); } catch {}
+      return next;
+    });
     setConfiguringId(null);
     setTestStatus((prev) => ({ ...prev, [name]: "idle" }));
   }
+  function disconnect(name: string) {
+    setConnectedIds((prev) => {
+      const next = new Set([...prev].filter((id) => id !== name));
+      try { localStorage.setItem("pp_int_connected", JSON.stringify([...next])); } catch {}
+      return next;
+    });
+    setConfiguringId(null);
+  }
 
+  const groups: IntGroup[] = ["All", "Identity", "Service Desk", "Monitoring", "Messaging", "Database"];
+  const groupIcons: Record<IntGroup, string> = { All: "⬡", Identity: "🔐", "Service Desk": "🎫", Monitoring: "📡", Messaging: "💬", Database: "🗄️" };
   const connectedCount = connectedIds.size;
+  const filtered = activeGroup === "All" ? integrationProviders : integrationProviders.filter((p) => p.group === activeGroup);
 
   return (
     <section className="system-page integrations-page">
@@ -2805,39 +2918,47 @@ function IntegrationsPage() {
         <div>
           <p>Connection Hub</p>
           <h1>Integrations</h1>
-          <span>Connect Supabase, ServiceNow, Jira, and custom webhooks to PatchPilot.</span>
+          <span>Connect identity, service desk, monitoring, and messaging platforms to PatchPilot.</span>
         </div>
         <div className="system-hero-actions">
-          <button type="button">Add Provider</button>
-          <button type="button">Test All</button>
+          <button type="button" onClick={() => setConfiguringId(null)}>Collapse All</button>
         </div>
       </header>
 
       <section className="system-kpis">
         <article>
           <span>Connected</span>
-          <strong>{connectedCount}</strong>
+          <strong style={{ color: "var(--green)" }}>{connectedCount}</strong>
           <small>Active integrations</small>
         </article>
         <article>
-          <span>Ready to Configure</span>
-          <strong>{Math.max(0, integrationProviders.filter((p) => p.status !== "Planned").length - connectedCount)}</strong>
-          <small>Credentials not yet added</small>
+          <span>Available</span>
+          <strong>{integrationProviders.filter((p) => p.status === "Ready to Connect").length}</strong>
+          <small>Ready to configure</small>
         </article>
         <article>
           <span>Planned</span>
           <strong>{integrationProviders.filter((p) => p.status === "Planned").length}</strong>
-          <small>On the integration roadmap</small>
+          <small>On the roadmap</small>
         </article>
         <article className={connectedCount === 0 ? "warning" : ""}>
-          <span>Sync Status</span>
-          <strong>{connectedCount > 0 ? "Active" : "Local only"}</strong>
-          <small>{connectedCount > 0 ? "Cloud sync enabled" : "No cloud connection"}</small>
+          <span>Sync</span>
+          <strong>{connectedCount > 0 ? "Cloud active" : "Local only"}</strong>
+          <small>{connectedCount > 0 ? `${connectedCount} connector${connectedCount > 1 ? "s" : ""} live` : "No cloud connection"}</small>
         </article>
       </section>
 
+      <div className="int-group-tabs">
+        {groups.map((g) => (
+          <button key={g} className={`int-group-tab${activeGroup === g ? " active" : ""}`} onClick={() => setActiveGroup(g)} type="button">
+            <span>{groupIcons[g]}</span> {g}
+            {g !== "All" && <em>{integrationProviders.filter((p) => p.group === g && connectedIds.has(p.name)).length > 0 ? "●" : ""}</em>}
+          </button>
+        ))}
+      </div>
+
       <div className="integration-list">
-        {integrationProviders.map((provider) => {
+        {filtered.map((provider) => {
           const isConfiguring = configuringId === provider.name;
           const isConnected = connectedIds.has(provider.name);
           const ts = testStatus[provider.name] ?? "idle";
@@ -2846,7 +2967,7 @@ function IntegrationsPage() {
             <article className={`ops-card int-card-v2${isConfiguring ? " expanded" : ""}${isConnected ? " connected" : ""}`} key={provider.name}>
               <div className="int-card-head">
                 <div className="int-card-identity">
-                  <span className="int-icon">{provider.icon}</span>
+                  <span className={`int-icon int-icon-${provider.group.toLowerCase().replace(/ /g, "-")}`}>{provider.icon}</span>
                   <div>
                     <h2>{provider.name}</h2>
                     <small>{provider.category}</small>
@@ -2854,11 +2975,15 @@ function IntegrationsPage() {
                 </div>
                 <div className="int-card-right">
                   {isConnected
-                    ? <em className="int-badge-connected">Connected</em>
+                    ? <em className="int-badge-connected">● Connected</em>
                     : <IntegrationStatusBadge status={provider.status} />}
                   {provider.status !== "Planned" && (
-                    <button className={`int-configure-btn${isConfiguring ? " cancel" : ""}`} onClick={() => setConfiguringId(isConfiguring ? null : provider.name)} type="button">
-                      {isConfiguring ? "Cancel" : isConnected ? "Reconfigure" : "Configure"}
+                    <button
+                      className={`int-configure-btn${isConfiguring ? " cancel" : ""}`}
+                      onClick={() => setConfiguringId(isConfiguring ? null : provider.name)}
+                      type="button"
+                    >
+                      {isConfiguring ? "Close" : isConnected ? "Reconfigure" : "Configure"}
                     </button>
                   )}
                 </div>
@@ -2866,31 +2991,54 @@ function IntegrationsPage() {
 
               <p className="int-desc">{provider.detail}</p>
 
-              {isConfiguring ? (
+              <div className="int-enables-row">
+                {provider.enables.map((e) => <span key={e} className="int-enables-tag">{e}</span>)}
+              </div>
+
+              {isConfiguring && (
                 <div className="int-form">
                   <div className="int-form-fields">
                     {provider.fields.map((field) => {
-                      const secret = /key|secret|token|password/i.test(field);
+                      const secret = /key|secret|token|password|passhash/i.test(field);
                       return (
                         <label className="int-form-label" key={field}>
                           <span>{field}</span>
-                          <input onChange={(e) => updateField(provider.name, field, e.target.value)} placeholder={secret ? "●●●●●●●●●●●●" : `Enter ${field.toLowerCase()}…`} type={secret ? "password" : "text"} value={vals[field] ?? ""} />
+                          <input
+                            onChange={(e) => updateField(provider.name, field, e.target.value)}
+                            placeholder={secret ? "●●●●●●●●●●●●" : `Enter ${field.toLowerCase()}…`}
+                            type={secret ? "password" : "text"}
+                            value={vals[field] ?? ""}
+                          />
                         </label>
                       );
                     })}
                   </div>
-                  <div className="int-form-actions">
-                    <button className={`int-test-btn${ts === "ok" ? " ok" : ts === "error" ? " error" : ""}`} onClick={() => testConnection(provider.name)} type="button">
-                      {ts === "testing" ? "Testing…" : ts === "ok" ? "Connection OK ✓" : ts === "error" ? "Failed — check credentials" : "Test Connection"}
-                    </button>
-                    <button className="int-save-btn" onClick={() => saveConnection(provider.name)} type="button">Save &amp; Connect</button>
+                  <div className="int-next-step-box">
+                    <span>Setup guide</span>
+                    <p>{provider.nextStep}</p>
                   </div>
-                  <div className="integration-next-step">
-                    <small>{provider.category}</small>
-                    <strong>{provider.nextStep}</strong>
+                  <div className="int-form-actions">
+                    <button
+                      className={`int-test-btn${ts === "ok" ? " ok" : ts === "error" ? " err" : ""}`}
+                      onClick={() => testConnection(provider.name)}
+                      type="button"
+                      disabled={ts === "testing"}
+                    >
+                      {ts === "testing" ? "Testing…" : ts === "ok" ? "✓ Connection OK" : ts === "error" ? "✗ Failed — check credentials" : "Test Connection"}
+                    </button>
+                    <button className="int-save-btn" onClick={() => saveConnection(provider.name)} type="button">
+                      Save &amp; Connect
+                    </button>
+                    {isConnected && (
+                      <button className="int-disconnect-btn" onClick={() => disconnect(provider.name)} type="button">
+                        Disconnect
+                      </button>
+                    )}
                   </div>
                 </div>
-              ) : (
+              )}
+
+              {!isConfiguring && (
                 <div className="int-fields-tags">
                   {provider.fields.map((f) => <span key={f}>{f}</span>)}
                 </div>
@@ -3443,6 +3591,7 @@ function AssetsInventoryPage({
   const [selectedUnitId, setSelectedUnitId]   = useState<string | null>(null);
   const [searchQuery, setSearchQuery]     = useState("");
   const [extraGroups, setExtraGroups]     = useState<InvGroup[]>([]);
+  const [qtyOverrides, setQtyOverrides]   = useState<Record<string, number>>({});
   const [showAddForm, setShowAddForm]     = useState(false);
   const [addForm, setAddForm]             = useState({ vendor: "", model: "", spec: "", qty: "" });
   const [importMessage, setImportMessage] = useState("");
@@ -3452,17 +3601,27 @@ function AssetsInventoryPage({
 
   const allGroups = useMemo(() => [...inventoryStock, ...extraGroups], [extraGroups]);
   const tabGroups = useMemo(() => allGroups.filter((g) => g.tab === activeTab), [allGroups, activeTab]);
+
+  function getQty(group: InvGroup) { return qtyOverrides[group.id] ?? group.qty; }
+  function adjustQty(group: InvGroup, delta: number) {
+    setQtyOverrides((prev) => ({ ...prev, [group.id]: Math.max(0, (prev[group.id] ?? group.qty) + delta) }));
+  }
+  function setQtyDirect(group: InvGroup, val: string) {
+    const n = parseInt(val, 10);
+    if (!isNaN(n) && n >= 0) setQtyOverrides((prev) => ({ ...prev, [group.id]: n }));
+  }
   const selectedGroup = tabGroups.find((g) => g.id === selectedGroupId) ?? null;
 
-  // summary KPIs from inventoryStock
+  // summary KPIs from inventoryStock (respects qty overrides)
   const invKpis = useMemo(() => {
-    const total      = allGroups.reduce((s, g) => s + g.qty, 0);
-    const sfps       = allGroups.filter((g) => g.tab === "SFPs").reduce((s, g) => s + g.qty, 0);
-    const fiber      = allGroups.filter((g) => g.tab === "Fiber").reduce((s, g) => s + g.qty, 0);
-    const switches   = allGroups.filter((g) => g.tab === "Switches").reduce((s, g) => s + g.qty, 0);
-    const servers    = allGroups.filter((g) => g.tab === "Servers").reduce((s, g) => s + g.qty, 0);
+    const q = (g: InvGroup) => qtyOverrides[g.id] ?? g.qty;
+    const total    = allGroups.reduce((s, g) => s + q(g), 0);
+    const sfps     = allGroups.filter((g) => g.tab === "SFPs").reduce((s, g) => s + q(g), 0);
+    const fiber    = allGroups.filter((g) => g.tab === "Fiber").reduce((s, g) => s + q(g), 0);
+    const switches = allGroups.filter((g) => g.tab === "Switches").reduce((s, g) => s + q(g), 0);
+    const servers  = allGroups.filter((g) => g.tab === "Servers").reduce((s, g) => s + q(g), 0);
     return { total, sfps, fiber, switches, servers };
-  }, [allGroups]);
+  }, [allGroups, qtyOverrides]);
 
   // right-panel: units to display (group drill-down filtered by search)
   const drillUnits = useMemo(() => {
@@ -3609,7 +3768,7 @@ function AssetsInventoryPage({
                     {group.vendor && <em>{group.vendor}</em>}
                     <strong>{group.model}</strong>
                   </span>
-                  <span className="inv-group-qty">{group.qty}</span>
+                  <span className="inv-group-qty">{getQty(group)}</span>
                 </div>
                 <div className="inv-group-spec">{group.spec}</div>
                 {group.units && (
@@ -3685,7 +3844,18 @@ function AssetsInventoryPage({
                   <strong>{selectedGroup.vendor} {selectedGroup.model}</strong>
                   <small>{selectedGroup.spec}</small>
                 </div>
-                <span>{selectedGroup.qty} units</span>
+                <div className="inv-qty-editor">
+                  <button className="inv-qty-btn" onClick={() => adjustQty(selectedGroup, -1)} type="button">−</button>
+                  <input
+                    className="inv-qty-input"
+                    type="number"
+                    min="0"
+                    value={getQty(selectedGroup)}
+                    onChange={(e) => setQtyDirect(selectedGroup, e.target.value)}
+                    onClick={(e) => e.stopPropagation()}
+                  />
+                  <button className="inv-qty-btn" onClick={() => adjustQty(selectedGroup, +1)} type="button">+</button>
+                </div>
               </div>
 
               {selectedGroup.units ? (
@@ -3718,7 +3888,7 @@ function AssetsInventoryPage({
                   <p className="inv-qty-note">No individual unit tracking for this category — quantity only.</p>
                   <div className="inv-qty-card">
                     <span>Total qty</span>
-                    <strong>{selectedGroup.qty}</strong>
+                    <strong>{getQty(selectedGroup)}</strong>
                   </div>
                 </div>
               )}
