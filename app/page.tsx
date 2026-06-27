@@ -55,6 +55,11 @@ type ServiceDeskProvider = {
   status: "Ready" | "Planned";
 };
 
+type FiberSignalResult = {
+  color: "red" | "white";
+  score: number;
+};
+
 type Scan = {
   title: string;
   detail: string;
@@ -1165,6 +1170,48 @@ function getBarcodeDetectorConstructor() {
   return (window as unknown as { BarcodeDetector?: BarcodeDetectorConstructor }).BarcodeDetector;
 }
 
+function detectFiberSignal(imageData: ImageData): FiberSignalResult | null {
+  const { data, width, height } = imageData;
+  const step = 4;
+  let brightPixels = 0;
+  let redPixels = 0;
+  let whitePixels = 0;
+  let maxBrightness = 0;
+  let sampledPixels = 0;
+
+  for (let y = Math.floor(height * 0.12); y < height * 0.88; y += step) {
+    for (let x = Math.floor(width * 0.12); x < width * 0.88; x += step) {
+      const index = (y * width + x) * 4;
+      const red = data[index];
+      const green = data[index + 1];
+      const blue = data[index + 2];
+      const brightness = Math.max(red, green, blue);
+      const spread = Math.max(red, green, blue) - Math.min(red, green, blue);
+      const isRedLaser = red > 185 && red - green > 55 && red - blue > 55;
+      const isWhiteLaser = brightness > 225 && spread < 52;
+
+      sampledPixels += 1;
+      maxBrightness = Math.max(maxBrightness, brightness);
+
+      if (isRedLaser || isWhiteLaser) {
+        brightPixels += 1;
+        if (isRedLaser) redPixels += 1;
+        if (isWhiteLaser) whitePixels += 1;
+      }
+    }
+  }
+
+  const hotRatio = brightPixels / Math.max(sampledPixels, 1);
+  const hasSmallBrightSource = brightPixels >= 5 && hotRatio > 0.00025 && hotRatio < 0.065 && maxBrightness > 225;
+
+  if (!hasSmallBrightSource) return null;
+
+  return {
+    color: redPixels > whitePixels ? "red" : "white",
+    score: Math.min(100, Math.round((brightPixels / Math.max(sampledPixels, 1)) * 5000))
+  };
+}
+
 function assetMatchesQuery(asset: AssetRecord, query: string) {
   const needle = query.trim().toLowerCase();
   if (!needle) return false;
@@ -1265,6 +1312,7 @@ export default function DashboardPage() {
   const [selectedAsset, setSelectedAsset] = useState<AssetRecord | null>(null);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [isFiberValidatorOpen, setIsFiberValidatorOpen] = useState(false);
   const [scanMessage, setScanMessage] = useState("Point the camera at a PatchPilot QR label.");
   const [actionNotice, setActionNotice] = useState("Command is ready: scan assets, create labels, import spreadsheets, or prepare service desk integrations.");
   const commandImportInputRef = useRef<HTMLInputElement | null>(null);
@@ -1434,9 +1482,9 @@ export default function DashboardPage() {
         break;
       case "fiber-test":
         setActiveNav("Command");
-        setWorkFilter("All");
-        setQuery("fiber");
-        setActionNotice("Fiber validation context loaded in activity and work search.");
+        setQuery("");
+        setIsFiberValidatorOpen(true);
+        setActionNotice("Fiber signal test opened. Hold the fiber tip close to the camera until a laser signal is detected.");
         break;
       case "import-assets":
         commandImportInputRef.current?.click();
@@ -1727,6 +1775,15 @@ export default function DashboardPage() {
         )}
         {isScannerOpen && (
           <QRScanModal message={scanMessage} onClose={() => setIsScannerOpen(false)} onResolved={(value) => void openAssetFromQrValue(value)} />
+        )}
+        {isFiberValidatorOpen && (
+          <FiberSignalModal
+            onClose={() => setIsFiberValidatorOpen(false)}
+            onDetected={(result) => {
+              setIsFiberValidatorOpen(false);
+              setActionNotice(`אות אור לייזר זוהה (${result.color === "red" ? "אדום" : "לבן"}). Fiber signal validation passed.`);
+            }}
+          />
         )}
       </section>
     </main>
@@ -2757,6 +2814,152 @@ function QRScanModal({
           <input value={manualValue} onChange={(event) => setManualValue(event.target.value)} placeholder="Enter QR ID manually..." />
           <button type="submit">Open Asset</button>
         </form>
+      </section>
+    </div>
+  );
+}
+
+function FiberSignalModal({
+  onClose,
+  onDetected
+}: {
+  onClose: () => void;
+  onDetected: (result: FiberSignalResult) => void;
+}) {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const frameRef = useRef<number | null>(null);
+  const stableHitsRef = useRef(0);
+  const resolvedRef = useRef(false);
+  const [validatorStatus, setValidatorStatus] = useState("Starting camera...");
+  const [signalHint, setSignalHint] = useState("No laser signal yet");
+
+  useEffect(() => {
+    let isMounted = true;
+
+    function stopCamera() {
+      if (frameRef.current) {
+        window.cancelAnimationFrame(frameRef.current);
+        frameRef.current = null;
+      }
+
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+    }
+
+    async function startCamera() {
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+
+      if (!video || !canvas || !navigator.mediaDevices?.getUserMedia) {
+        setValidatorStatus("Camera access is not available in this browser.");
+        return;
+      }
+
+      if (!window.isSecureContext) {
+        setValidatorStatus("Camera access needs HTTPS on iPhone.");
+      }
+
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: "environment" },
+            width: { ideal: 1280 },
+            height: { ideal: 720 }
+          },
+          audio: false
+        });
+
+        if (!isMounted) {
+          stream.getTracks().forEach((track) => track.stop());
+          return;
+        }
+
+        streamRef.current = stream;
+        video.srcObject = stream;
+        video.setAttribute("playsinline", "true");
+        await video.play();
+        setValidatorStatus("Camera ready. Bring the fiber tip close to the lens.");
+
+        const context = canvas.getContext("2d", { willReadFrequently: true });
+
+        const scanFrame = () => {
+          if (!isMounted || resolvedRef.current) return;
+
+          if (context && video.videoWidth && video.videoHeight) {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+            const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+            const result = detectFiberSignal(imageData);
+
+            if (result) {
+              stableHitsRef.current += 1;
+              setSignalHint(`${result.color === "red" ? "Red" : "White"} light candidate / confidence ${result.score}%`);
+
+              if (stableHitsRef.current >= 4) {
+                resolvedRef.current = true;
+                stopCamera();
+                onDetected(result);
+                return;
+              }
+            } else {
+              stableHitsRef.current = Math.max(0, stableHitsRef.current - 1);
+              setSignalHint("No laser signal yet");
+            }
+          }
+
+          frameRef.current = window.requestAnimationFrame(scanFrame);
+        };
+
+        frameRef.current = window.requestAnimationFrame(scanFrame);
+      } catch {
+        setValidatorStatus("Camera permission was blocked. Allow camera access and try again.");
+      }
+    }
+
+    void startCamera();
+
+    return () => {
+      isMounted = false;
+      stopCamera();
+    };
+  }, [onDetected]);
+
+  return (
+    <div className="scanner-overlay" role="dialog" aria-modal="true" aria-label="Validate fiber laser signal">
+      <section className="scanner-panel fiber-signal-panel">
+        <header>
+          <div>
+            <p>Fiber Validation</p>
+            <h2>Run Signal Test</h2>
+            <span>Hold the fiber tip close to the phone camera. The test closes automatically when red or white laser light is detected.</span>
+          </div>
+          <button onClick={onClose} type="button">Close</button>
+        </header>
+
+        <div className="scanner-camera fiber-signal-camera">
+          <video ref={videoRef} muted playsInline />
+          <canvas ref={canvasRef} aria-hidden="true" />
+          <div className="scanner-frame fiber-signal-frame">
+            <span />
+            <span />
+            <span />
+            <span />
+          </div>
+        </div>
+
+        <div className="scanner-status fiber-signal-status">
+          <strong>{validatorStatus}</strong>
+          <small>{signalHint}</small>
+        </div>
+
+        <div className="fiber-signal-note">
+          <strong>Field note</strong>
+          <span>This is a visual camera check, not calibrated optical power measurement.</span>
+        </div>
       </section>
     </div>
   );

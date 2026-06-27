@@ -824,6 +824,54 @@
   line-height: 1.45;
 }
 
+.fiber-signal-panel {
+  border-color: rgba(34, 211, 238, 0.34);
+}
+
+.fiber-signal-camera {
+  background:
+    radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.12), transparent 18%),
+    #03080f;
+}
+
+.fiber-signal-frame {
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.fiber-signal-frame::after {
+  content: "";
+  position: absolute;
+  inset: 42%;
+  border: 1px dashed rgba(34, 211, 238, 0.58);
+  border-radius: 50%;
+  box-shadow: 0 0 32px rgba(34, 211, 238, 0.22);
+}
+
+.fiber-signal-status strong {
+  color: #dffbff;
+}
+
+.fiber-signal-note {
+  display: grid;
+  gap: 4px;
+  margin: 0 14px 14px;
+  border: 1px solid rgba(250, 204, 21, 0.2);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: rgba(250, 204, 21, 0.07);
+}
+
+.fiber-signal-note strong {
+  color: #fef3c7;
+  font-size: 0.78rem;
+}
+
+.fiber-signal-note span {
+  color: #c7d2e1;
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
 .scanner-manual {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
