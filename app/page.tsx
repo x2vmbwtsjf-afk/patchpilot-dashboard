@@ -224,6 +224,20 @@ type RackRecord = {
   qrAssets: string[];
 };
 
+type RackDeviceDraft = {
+  id: string;
+  hostname: string;
+  kind: DeviceKind;
+  ip: string;
+  serial: string;
+  startU: string;
+  heightU: string;
+  status: DeviceStatus;
+  qrId: string;
+  vlans: string;
+  technician: string;
+};
+
 type CableInventoryStatus = "In Stock" | "Low Stock" | "Reserved" | "Deployed" | "Quarantine";
 type CableInventoryCategory = CableKind | "Transceiver";
 
@@ -3326,17 +3340,39 @@ function AuditSeverityBadge({ severity }: { severity: AuditLogEntry["severity"] 
 }
 
 function RacksPage({ onOpenScanner }: { onOpenScanner: () => void }) {
-  const [selectedRack, setSelectedRack] = useState<RackRecord>(rackFleet[0]);
-  const [selectedDevice, setSelectedDevice] = useState<RackDevice>(rackFleet[0].devices[1]);
+  const [editableRacks, setEditableRacks] = useState<RackRecord[]>(() => {
+    try {
+      const saved = localStorage.getItem("patchpilot_rack_layouts");
+      return saved ? (JSON.parse(saved) as RackRecord[]) : rackFleet;
+    } catch {
+      return rackFleet;
+    }
+  });
+  const [selectedRackId, setSelectedRackId] = useState(rackFleet[0].id);
+  const [selectedDeviceId, setSelectedDeviceId] = useState(rackFleet[0].devices[1]?.id ?? rackFleet[0].devices[0]?.id ?? "");
   const [selectedCableId, setSelectedCableId] = useState("CBL-8812");
+  const [selectedU, setSelectedU] = useState(rackFleet[0].devices[1]?.startU ?? 42);
+  const [deviceDraft, setDeviceDraft] = useState<RackDeviceDraft>(() => createRackDeviceDraft(rackFleet[0].devices[1] ?? null, rackFleet[0].devices[1]?.startU ?? 42));
+  const [rackEditorMessage, setRackEditorMessage] = useState("Select a device or an empty U slot to edit the rack.");
   const [rackQuery, setRackQuery] = useState("");
   const [siteFilter, setSiteFilter] = useState("All Sites");
   const [roomFilter, setRoomFilter] = useState("All Rooms");
   const [statusFilter, setStatusFilter] = useState("All Status");
   const [deviceFilter, setDeviceFilter] = useState("All Devices");
 
+  useEffect(() => {
+    try {
+      localStorage.setItem("patchpilot_rack_layouts", JSON.stringify(editableRacks));
+    } catch {
+      // Local persistence is best-effort only.
+    }
+  }, [editableRacks]);
+
+  const selectedRack = useMemo(() => editableRacks.find((rack) => rack.id === selectedRackId) ?? editableRacks[0] ?? rackFleet[0], [editableRacks, selectedRackId]);
+  const selectedDevice = useMemo(() => selectedRack.devices.find((device) => device.id === selectedDeviceId) ?? selectedRack.devices[0] ?? createRackDeviceFromDraft(createRackDeviceDraft(null, selectedU)), [selectedDeviceId, selectedRack.devices, selectedU]);
+
   const filteredRacks = useMemo(() => {
-    return rackFleet.filter((rack) => {
+    return editableRacks.filter((rack) => {
       const text = `${rack.name} ${rack.site} ${rack.room} ${rack.row} ${rack.devices.map((device) => `${device.hostname} ${device.ip} ${device.qrId}`).join(" ")}`.toLowerCase();
       const matchesQuery = !rackQuery.trim() || text.includes(rackQuery.trim().toLowerCase());
       const matchesSite = siteFilter === "All Sites" || rack.site === siteFilter;
@@ -3346,7 +3382,7 @@ function RacksPage({ onOpenScanner }: { onOpenScanner: () => void }) {
 
       return matchesQuery && matchesSite && matchesRoom && matchesStatus && matchesDevice;
     });
-  }, [deviceFilter, rackQuery, roomFilter, siteFilter, statusFilter]);
+  }, [deviceFilter, editableRacks, rackQuery, roomFilter, siteFilter, statusFilter]);
 
   const rowGroups = useMemo(() => {
     return filteredRacks.reduce<Record<string, RackRecord[]>>((groups, rack) => {
@@ -3370,14 +3406,102 @@ function RacksPage({ onOpenScanner }: { onOpenScanner: () => void }) {
   const selectedCable = selectedRack.cables.find((cable) => cable.id === selectedCableId) ?? selectedRack.cables[0];
 
   function openRack(rack: RackRecord) {
-    setSelectedRack(rack);
-    setSelectedDevice(rack.devices[0]);
+    const firstDevice = rack.devices[0];
+    setSelectedRackId(rack.id);
+    setSelectedDeviceId(firstDevice?.id ?? "");
+    setSelectedU(firstDevice?.startU ?? 42);
+    setDeviceDraft(createRackDeviceDraft(firstDevice ?? null, firstDevice?.startU ?? 42));
     setSelectedCableId(rack.cables[0]?.id ?? "");
+    setRackEditorMessage(`Opened ${rack.name}. Select a U slot or device to edit.`);
   }
 
   function selectPort(device: RackDevice, port: RackPort) {
-    setSelectedDevice(device);
+    selectDeviceForEdit(device);
     if (port.cableId) setSelectedCableId(port.cableId);
+  }
+
+  function selectDeviceForEdit(device: RackDevice) {
+    setSelectedDeviceId(device.id);
+    setSelectedU(device.startU);
+    setDeviceDraft(createRackDeviceDraft(device, device.startU));
+    setRackEditorMessage(`Editing ${device.hostname} at U${device.startU}.`);
+  }
+
+  function selectEmptyU(unit: number) {
+    setSelectedDeviceId("");
+    setSelectedU(unit);
+    setDeviceDraft(createRackDeviceDraft(null, unit));
+    setRackEditorMessage(`Empty U${unit} selected. Fill the form and save a device.`);
+  }
+
+  function updateDeviceDraft<K extends keyof RackDeviceDraft>(key: K, value: RackDeviceDraft[K]) {
+    setDeviceDraft((current) => ({ ...current, [key]: value }));
+  }
+
+  function saveRackDevice() {
+    const startU = Number(deviceDraft.startU);
+    const heightU = Number(deviceDraft.heightU);
+
+    if (!deviceDraft.hostname.trim()) {
+      setRackEditorMessage("Hostname is required before saving.");
+      return;
+    }
+
+    if (!Number.isInteger(startU) || !Number.isInteger(heightU) || startU < 1 || startU > 42 || heightU < 1 || startU - heightU + 1 < 1) {
+      setRackEditorMessage("Use a valid U position and height inside the 42U rack.");
+      return;
+    }
+
+    const targetId = deviceDraft.id.trim() || createRackDeviceId(deviceDraft.hostname);
+    const hasCollision = selectedRack.devices.some((device) => {
+      if (device.id === targetId) return false;
+      const deviceTop = device.startU;
+      const deviceBottom = device.startU - device.heightU + 1;
+      const draftTop = startU;
+      const draftBottom = startU - heightU + 1;
+      return draftBottom <= deviceTop && draftTop >= deviceBottom;
+    });
+
+    if (hasCollision) {
+      setRackEditorMessage(`U${startU} with height ${heightU} overlaps another device.`);
+      return;
+    }
+
+    const savedDevice = createRackDeviceFromDraft({ ...deviceDraft, id: targetId, startU: String(startU), heightU: String(heightU) });
+
+    setEditableRacks((current) =>
+      current.map((rack) =>
+        rack.id === selectedRack.id
+          ? {
+              ...rack,
+              devices: [...rack.devices.filter((device) => device.id !== targetId), savedDevice].sort((a, b) => b.startU - a.startU),
+              qrAssets: Array.from(new Set([...rack.qrAssets, savedDevice.qrId].filter(Boolean)))
+            }
+          : rack
+      )
+    );
+    setSelectedDeviceId(savedDevice.id);
+    setSelectedU(savedDevice.startU);
+    setDeviceDraft(createRackDeviceDraft(savedDevice, savedDevice.startU));
+    setRackEditorMessage(`Saved ${savedDevice.hostname} in ${selectedRack.name} at U${savedDevice.startU}.`);
+  }
+
+  function removeRackDevice() {
+    if (!selectedDeviceId) {
+      setRackEditorMessage("Select an existing device before removing.");
+      return;
+    }
+
+    setEditableRacks((current) =>
+      current.map((rack) =>
+        rack.id === selectedRack.id
+          ? { ...rack, devices: rack.devices.filter((device) => device.id !== selectedDeviceId) }
+          : rack
+      )
+    );
+    setSelectedDeviceId("");
+    setDeviceDraft(createRackDeviceDraft(null, selectedU));
+    setRackEditorMessage("Device removed from rack layout.");
   }
 
   return (
@@ -3517,12 +3641,30 @@ function RacksPage({ onOpenScanner }: { onOpenScanner: () => void }) {
             <section className="rack-elevation-wrap">
               <div className="rack-elevation-head">
                 <strong>Rack Elevation</strong>
-                <span>42U front view</span>
+                <span>42U front view / click any U</span>
               </div>
-              <RackElevation rack={selectedRack} selectedDevice={selectedDevice} selectedCableId={selectedCableId} onSelectDevice={setSelectedDevice} onSelectPort={selectPort} />
+              <RackElevation
+                rack={selectedRack}
+                selectedDeviceId={selectedDeviceId}
+                selectedCableId={selectedCableId}
+                selectedU={selectedU}
+                onSelectDevice={selectDeviceForEdit}
+                onSelectEmptyU={selectEmptyU}
+                onSelectPort={selectPort}
+              />
             </section>
 
             <section className="rack-detail-stack">
+              <RackDeviceEditor
+                draft={deviceDraft}
+                message={rackEditorMessage}
+                selectedRack={selectedRack}
+                selectedDeviceId={selectedDeviceId}
+                onChange={updateDeviceDraft}
+                onDelete={removeRackDevice}
+                onSave={saveRackDevice}
+              />
+
               <div className="cable-trace-card">
                 <div>
                   <strong>Cable Trace</strong>
@@ -3560,6 +3702,66 @@ function HealthBadge({ health }: { health: RackHealth }) {
   return <em className={`rack-health ${health.toLowerCase()}`}><i />{health}</em>;
 }
 
+function createRackDeviceId(hostname: string) {
+  const slug = hostname.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  return `${slug || "rack-device"}-${Date.now().toString(36)}`;
+}
+
+function createRackDeviceDraft(device: RackDevice | null, unit: number): RackDeviceDraft {
+  const id = createAssetId();
+
+  if (!device) {
+    return {
+      id: "",
+      hostname: "",
+      kind: "Server",
+      ip: "",
+      serial: "",
+      startU: String(unit),
+      heightU: "1",
+      status: "Online",
+      qrId: id,
+      vlans: "",
+      technician: "Operations"
+    };
+  }
+
+  return {
+    id: device.id,
+    hostname: device.hostname,
+    kind: device.kind,
+    ip: device.ip,
+    serial: device.serial,
+    startU: String(device.startU),
+    heightU: String(device.heightU),
+    status: device.status,
+    qrId: device.qrId,
+    vlans: device.vlans.join(", "),
+    technician: device.technician
+  };
+}
+
+function createRackDeviceFromDraft(draft: RackDeviceDraft): RackDevice {
+  const hostname = draft.hostname.trim() || "NEW-DEVICE";
+  const qrId = draft.qrId.trim() || createAssetId();
+
+  return {
+    id: draft.id.trim() || createRackDeviceId(hostname),
+    hostname,
+    kind: draft.kind,
+    ip: draft.ip.trim() || "N/A",
+    serial: draft.serial.trim() || "Not set",
+    startU: Number(draft.startU),
+    heightU: Number(draft.heightU),
+    status: draft.status,
+    qrId,
+    vlans: draft.vlans.split(",").map((item) => item.trim()).filter(Boolean),
+    ports: [{ id: "mgmt", label: "MGMT", connector: "RJ45" }],
+    lastUpdated: "Just now",
+    technician: draft.technician.trim() || "Operations"
+  };
+}
+
 function MiniRackPreview({ rack }: { rack: RackRecord }) {
   return (
     <div className="mini-rack-preview">
@@ -3572,7 +3774,23 @@ function MiniRackPreview({ rack }: { rack: RackRecord }) {
   );
 }
 
-function RackElevation({ rack, selectedDevice, selectedCableId, onSelectDevice, onSelectPort }: { rack: RackRecord; selectedDevice: RackDevice; selectedCableId: string; onSelectDevice: (device: RackDevice) => void; onSelectPort: (device: RackDevice, port: RackPort) => void }) {
+function RackElevation({
+  rack,
+  selectedDeviceId,
+  selectedCableId,
+  selectedU,
+  onSelectDevice,
+  onSelectEmptyU,
+  onSelectPort
+}: {
+  rack: RackRecord;
+  selectedDeviceId: string;
+  selectedCableId: string;
+  selectedU: number;
+  onSelectDevice: (device: RackDevice) => void;
+  onSelectEmptyU: (unit: number) => void;
+  onSelectPort: (device: RackDevice, port: RackPort) => void;
+}) {
   return (
     <div className="rack-elevation">
       {Array.from({ length: 42 }).map((_, index) => {
@@ -3585,7 +3803,7 @@ function RackElevation({ rack, selectedDevice, selectedCableId, onSelectDevice, 
             <span className="rack-u-label">U{u}</span>
             {device && isDeviceTop ? (
               <button
-                className={`rack-device device-${device.kind.toLowerCase().replace(" ", "-")} ${selectedDevice.id === device.id ? "active" : ""}`}
+                className={`rack-device device-${device.kind.toLowerCase().replace(" ", "-")} ${selectedDeviceId === device.id ? "active" : ""}`}
                 onClick={() => onSelectDevice(device)}
                 style={{ gridRow: `span ${device.heightU}` }}
                 title={`${device.hostname} / ${device.ip} / ${device.qrId}`}
@@ -3612,12 +3830,105 @@ function RackElevation({ rack, selectedDevice, selectedCableId, onSelectDevice, 
                 <em>QR</em>
               </button>
             ) : !device ? (
-              <span className="rack-empty-space" />
+              <button className={`rack-empty-space ${selectedU === u && !selectedDeviceId ? "active" : ""}`} onClick={() => onSelectEmptyU(u)} title={`Add device at U${u}`} type="button">
+                <span>Add</span>
+              </button>
             ) : null}
           </div>
         );
       })}
     </div>
+  );
+}
+
+function RackDeviceEditor({
+  draft,
+  message,
+  selectedRack,
+  selectedDeviceId,
+  onChange,
+  onDelete,
+  onSave
+}: {
+  draft: RackDeviceDraft;
+  message: string;
+  selectedRack: RackRecord;
+  selectedDeviceId: string;
+  onChange: <K extends keyof RackDeviceDraft>(key: K, value: RackDeviceDraft[K]) => void;
+  onDelete: () => void;
+  onSave: () => void;
+}) {
+  return (
+    <section className="rack-device-editor">
+      <header>
+        <div>
+          <strong>{selectedDeviceId ? "Edit Rack Unit" : "Add Device to U"}</strong>
+          <span>{selectedRack.name} / {selectedRack.site} / {selectedRack.room}</span>
+        </div>
+        <button onClick={onSave} type="button">Save U</button>
+      </header>
+
+      <p>{message}</p>
+
+      <div className="rack-editor-grid">
+        <label>
+          <span>Hostname</span>
+          <input value={draft.hostname} onChange={(event) => onChange("hostname", event.target.value)} placeholder="SRV-NEW-01" />
+        </label>
+        <label>
+          <span>Type</span>
+          <select value={draft.kind} onChange={(event) => onChange("kind", event.target.value as DeviceKind)}>
+            <option>Switch</option>
+            <option>Server</option>
+            <option>Patch Panel</option>
+            <option>Storage</option>
+            <option>PDU</option>
+            <option>UPS</option>
+          </select>
+        </label>
+        <label>
+          <span>Start U</span>
+          <input max="42" min="1" type="number" value={draft.startU} onChange={(event) => onChange("startU", event.target.value)} />
+        </label>
+        <label>
+          <span>Height U</span>
+          <input max="10" min="1" type="number" value={draft.heightU} onChange={(event) => onChange("heightU", event.target.value)} />
+        </label>
+        <label>
+          <span>Status</span>
+          <select value={draft.status} onChange={(event) => onChange("status", event.target.value as DeviceStatus)}>
+            <option>Online</option>
+            <option>Warning</option>
+            <option>Offline</option>
+          </select>
+        </label>
+        <label>
+          <span>IP</span>
+          <input value={draft.ip} onChange={(event) => onChange("ip", event.target.value)} placeholder="10.20.12.10" />
+        </label>
+        <label>
+          <span>Serial</span>
+          <input value={draft.serial} onChange={(event) => onChange("serial", event.target.value)} placeholder="SERIAL-001" />
+        </label>
+        <label>
+          <span>QR ID</span>
+          <input value={draft.qrId} onChange={(event) => onChange("qrId", event.target.value)} placeholder="PP-000900" />
+        </label>
+        <label>
+          <span>VLANs</span>
+          <input value={draft.vlans} onChange={(event) => onChange("vlans", event.target.value)} placeholder="110, 120" />
+        </label>
+        <label>
+          <span>Technician</span>
+          <input value={draft.technician} onChange={(event) => onChange("technician", event.target.value)} placeholder="David M." />
+        </label>
+      </div>
+
+      <div className="rack-editor-actions">
+        <button onClick={onSave} type="button">Save Device</button>
+        <button disabled={!selectedDeviceId} onClick={onDelete} type="button">Remove</button>
+      </div>
+    </section>
   );
 }
 

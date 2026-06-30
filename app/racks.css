@@ -474,6 +474,25 @@
   border: 1px dashed rgba(148, 163, 184, 0.13);
   border-radius: 4px;
   background: rgba(3, 8, 14, 0.35);
+  color: rgba(148, 163, 184, 0);
+  padding: 0;
+  text-align: center;
+}
+
+.rack-empty-space:hover,
+.rack-empty-space.active {
+  border-color: rgba(34, 211, 238, 0.5);
+  background: rgba(34, 211, 238, 0.1);
+  color: #9ff3ff;
+}
+
+.rack-empty-space span {
+  display: block;
+  overflow: hidden;
+  font-size: 0.54rem;
+  font-weight: 900;
+  line-height: 11px;
+  text-transform: uppercase;
 }
 
 .rack-device {
@@ -562,6 +581,116 @@
   border-color: rgba(34, 211, 238, 0.42);
   background: rgba(34, 211, 238, 0.12);
   color: var(--cyan);
+}
+
+.rack-device-editor {
+  display: grid;
+  gap: 10px;
+  border: 1px solid rgba(34, 211, 238, 0.18);
+  border-radius: 12px;
+  padding: 12px;
+  background: rgba(34, 211, 238, 0.055);
+}
+
+.rack-device-editor header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.rack-device-editor strong,
+.rack-device-editor span {
+  display: block;
+}
+
+.rack-device-editor header strong {
+  color: #eef6ff;
+  font-size: 0.9rem;
+}
+
+.rack-device-editor header span,
+.rack-device-editor p {
+  color: #9fb4cc;
+  font-size: 0.72rem;
+  line-height: 1.35;
+}
+
+.rack-device-editor p {
+  margin: 0;
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 8px;
+  padding: 8px 9px;
+  background: rgba(7, 17, 29, 0.42);
+}
+
+.rack-device-editor header button,
+.rack-editor-actions button {
+  min-height: 32px;
+  border: 1px solid rgba(34, 211, 238, 0.3);
+  border-radius: 8px;
+  padding: 0 10px;
+  background: rgba(34, 211, 238, 0.1);
+  color: #e8f7ff;
+  font-size: 0.74rem;
+  font-weight: 850;
+}
+
+.rack-device-editor header button:hover,
+.rack-editor-actions button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.rack-editor-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.rack-editor-grid label {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.rack-editor-grid label span {
+  color: var(--muted);
+  font-size: 0.66rem;
+  font-weight: 850;
+}
+
+.rack-editor-grid input,
+.rack-editor-grid select {
+  width: 100%;
+  min-height: 34px;
+  border: 1px solid rgba(148, 163, 184, 0.18);
+  border-radius: 8px;
+  padding: 0 9px;
+  background: rgba(7, 17, 29, 0.72);
+  color: var(--text);
+  outline: none;
+}
+
+.rack-editor-grid input:focus,
+.rack-editor-grid select:focus {
+  border-color: rgba(34, 211, 238, 0.42);
+  box-shadow: 0 0 0 3px rgba(34, 211, 238, 0.07);
+}
+
+.rack-editor-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.rack-editor-actions button:first-child {
+  border-color: rgba(61, 220, 132, 0.34);
+  background: rgba(61, 220, 132, 0.12);
+}
+
+.rack-editor-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 .rack-detail-stack {
