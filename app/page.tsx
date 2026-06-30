@@ -2032,7 +2032,7 @@ export default function DashboardPage() {
       const fallbackAsset = demoAssetInventory.find((asset) => asset.id === id || asset.qrCode === id);
 
       if (!found && !fallbackAsset) {
-        const shouldCreate = window.confirm(`QR/RFID code ${id} was not found in the database.\n\nAdd it as a new asset?`);
+        const shouldCreate = window.confirm(`QR/tag code ${id} was not found in the database.\n\nAdd it as a new asset?`);
 
         if (shouldCreate) {
           setSelectedAsset(createAssetDraft(id, value.trim()));
@@ -2040,14 +2040,14 @@ export default function DashboardPage() {
           setQuery("");
           setIsSearchOpen(false);
           setIsScannerOpen(false);
-          setActionNotice(`QR/RFID ${id} was not found. Fill the asset details, then Save to DB.`);
+          setActionNotice(`QR/tag ${id} was not found. Fill the asset details, then Save to DB.`);
           setScanMessage(`Create new asset for ${id}`);
           return;
         }
 
         setIsScannerOpen(false);
         setScanMessage(`No asset found for ${id}.`);
-        setActionNotice(`QR/RFID ${id} was not found and was not added.`);
+        setActionNotice(`QR/tag ${id} was not found and was not added.`);
         return;
       }
 
@@ -2815,14 +2815,14 @@ function SettingsPage({
         {activeTab === "Scanner" && (
           <div className="settings-tab-cols">
             <section className="ops-card settings-card">
-              <header><h2>QR &amp; RFID Scanner</h2></header>
+              <header><h2>QR &amp; NFC Scanner</h2></header>
               <div className="settings-fields">
                 <div className="settings-row">
                   <div><strong>Scan Throttle (ms)</strong><span>Minimum delay between camera scan attempts — reduces CPU load</span></div>
                   <input className="settings-input settings-input-sm" max="500" min="50" onChange={(e) => { setScanThrottle(e.target.value); markDirty(); }} type="number" value={scanThrottle} />
                 </div>
                 <div className="settings-row">
-                  <div><strong>Unknown QR/RFID Flow</strong><span>What happens when a scanned code has no matching asset</span></div>
+                  <div><strong>Unknown QR/Tag Flow</strong><span>What happens when a scanned code has no matching asset</span></div>
                   <select className="settings-select" onChange={(e) => { setUnknownQrFlow(e.target.value); markDirty(); }} value={unknownQrFlow}>
                     <option value="confirm">Confirm before creating</option>
                     <option value="auto">Auto-create draft asset</option>
@@ -2834,7 +2834,7 @@ function SettingsPage({
                   <SettingsToggle checked={requireScanConfirm} onChange={(v) => { setRequireScanConfirm(v); markDirty(); }} />
                 </div>
                 <div className="settings-row">
-                  <div><strong>NFC Tag Support</strong><span>Read NFC stickers on assets — hold phone near tag instead of scanning QR (Android Chrome + iOS 14+)</span></div>
+                  <div><strong>NFC Tag Support</strong><span>Reads NFC stickers only in supported browsers, mainly Android Chrome. Camera cannot read RFID.</span></div>
                   <SettingsToggle checked={rfidEnabled} onChange={(v) => { setRfidEnabled(v); try { localStorage.setItem("pp_nfc", String(v)); } catch {} markDirty(); }} />
                 </div>
               </div>
@@ -4239,13 +4239,15 @@ function QRScanModal({
   const lastScanRef = useRef(0);
   const [manualValue, setManualValue] = useState("");
   const [scannerStatus, setScannerStatus] = useState("Starting camera...");
-  const [nfcStatus, setNfcStatus] = useState<"off" | "ready" | "error">("off");
+  const [nfcStatus, setNfcStatus] = useState<"idle" | "starting" | "ready" | "unsupported" | "error">("idle");
+  const nfcSupported = typeof window !== "undefined" && "NDEFReader" in window;
 
-  // ── NFC (Web NFC API — Chrome/Android + iOS 14+) ──────────────────────────
-  const nfcEnabled = (() => { try { return localStorage.getItem("pp_nfc") === "true"; } catch { return false; } })();
+  async function startNfcScan() {
+    if (!nfcSupported) {
+      setNfcStatus("unsupported");
+      return;
+    }
 
-  useEffect(() => {
-    if (!nfcEnabled) return;
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const NDEFReader = (window as any).NDEFReader as (new () => {
       scan: () => Promise<void>;
@@ -4253,48 +4255,58 @@ function QRScanModal({
     }) | undefined;
 
     if (!NDEFReader) {
-      setNfcStatus("error");
+      setNfcStatus("unsupported");
       return;
     }
 
-    let abortController: AbortController | null = null;
+    try {
+      setNfcStatus("starting");
+      const reader = new NDEFReader();
+      await reader.scan();
+      setNfcStatus("ready");
 
-    async function startNFC() {
-      try {
-        abortController = new AbortController();
-        const reader = new NDEFReader!();
-        await reader.scan();
-        setNfcStatus("ready");
+      reader.addEventListener("reading", ({ message, serialNumber }) => {
+        if (isResolvedRef.current) return;
 
-        reader.addEventListener("reading", ({ message, serialNumber }) => {
-          if (isResolvedRef.current) return;
-          // Try to find a URL or text record with PatchPilot payload
-          for (const record of message.records) {
-            const decoder = new TextDecoder();
-            let value = "";
-            if (record.recordType === "url" || record.recordType === "text") {
-              value = decoder.decode(record.data);
-            } else if (record.recordType === "mime" && record.mediaType === "text/plain") {
-              value = decoder.decode(record.data);
-            }
-            if (!value) value = serialNumber; // fallback: use tag UID as asset ID
-            if (value) {
-              isResolvedRef.current = true;
-              onResolved(value);
-              return;
-            }
+        for (const record of message.records) {
+          const decoder = new TextDecoder();
+          let value = "";
+
+          if (record.recordType === "url" || record.recordType === "text") {
+            value = decoder.decode(record.data);
+          } else if (record.recordType === "mime" && record.mediaType === "text/plain") {
+            value = decoder.decode(record.data);
           }
-          // fallback: serial number
-          if (serialNumber) { isResolvedRef.current = true; onResolved(serialNumber); }
-        });
-      } catch {
-        setNfcStatus("error");
-      }
+
+          if (!value) value = serialNumber;
+
+          if (value) {
+            isResolvedRef.current = true;
+            onResolved(value);
+            return;
+          }
+        }
+
+        if (serialNumber) {
+          isResolvedRef.current = true;
+          onResolved(serialNumber);
+        }
+      });
+    } catch {
+      setNfcStatus("error");
+    }
+  }
+
+  useEffect(() => {
+    let shouldAutoStart = false;
+    try {
+      shouldAutoStart = localStorage.getItem("pp_nfc") === "true";
+    } catch {
+      shouldAutoStart = false;
     }
 
-    void startNFC();
-    return () => { abortController?.abort(); };
-  }, [nfcEnabled, onResolved]);
+    if (shouldAutoStart) void startNfcScan();
+  }, []);
 
   useEffect(() => {
     let isMounted = true;
@@ -4423,20 +4435,25 @@ function QRScanModal({
         <header>
           <div>
             <p>PatchPilot Scanner</p>
-            <h2>Scan QR{nfcEnabled ? " / NFC" : ""}</h2>
+            <h2>Scan QR / NFC</h2>
             <span>{message}</span>
           </div>
           <button onClick={onClose} type="button">Close</button>
         </header>
 
-        {/* NFC status bar */}
-        {nfcEnabled && (
-          <div className={`scanner-nfc-bar ${nfcStatus}`}>
-            {nfcStatus === "ready" && <><span className="nfc-dot" />📡 NFC ready — hold phone near asset tag</>}
-            {nfcStatus === "error" && <>⚠ NFC not available in this browser — use QR scan below</>}
-            {nfcStatus === "off"   && <>⏳ Starting NFC…</>}
+        <div className={`scanner-nfc-bar ${nfcStatus}`}>
+          <div>
+            <strong>NFC tag read</strong>
+            <span>
+              {nfcStatus === "idle" && "Optional. Works with NFC tags in supported browsers, mainly Android Chrome."}
+              {nfcStatus === "starting" && "Starting NFC reader. Approve the browser prompt, then hold the phone near the NFC tag."}
+              {nfcStatus === "ready" && "NFC ready. Hold the phone near the NFC tag."}
+              {nfcStatus === "unsupported" && "This browser cannot read NFC tags. iPhone Safari and camera-only scans cannot read RFID."}
+              {nfcStatus === "error" && "NFC could not start. Check browser support, permissions, and that this is an NFC tag."}
+            </span>
           </div>
-        )}
+          <button onClick={() => void startNfcScan()} type="button">Start NFC</button>
+        </div>
 
         <div className="scanner-camera">
           <video ref={videoRef} muted playsInline />
@@ -4451,11 +4468,11 @@ function QRScanModal({
 
         <div className="scanner-status">
           <strong>{scannerStatus}</strong>
-          <small>Supported: PP-000128 · patchpilot://asset/PP-000128 · NFC tag with same payload</small>
+          <small>Camera reads QR only. NFC tags need browser NFC support. UHF/125kHz RFID tags need an external reader or manual ID entry.</small>
         </div>
 
         <form className="scanner-manual" onSubmit={submitManualValue}>
-          <input value={manualValue} onChange={(event) => setManualValue(event.target.value)} placeholder="Enter QR ID or asset ID manually..." />
+          <input value={manualValue} onChange={(event) => setManualValue(event.target.value)} placeholder="Enter QR, NFC UID, RFID ID, or asset ID manually..." />
           <button type="submit">Open Asset</button>
         </form>
       </section>
