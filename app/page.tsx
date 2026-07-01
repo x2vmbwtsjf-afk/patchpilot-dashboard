@@ -1,5 +1,7 @@
 "use client";
 
+import { BrowserMultiFormatReader } from "@zxing/browser";
+import { BarcodeFormat, DecodeHintType } from "@zxing/library";
 import jsQR from "jsqr";
 import QRCode from "qrcode";
 import { useEffect, useMemo, useRef, useState, type ChangeEvent, type FormEvent } from "react";
@@ -1710,6 +1712,55 @@ function createAssetFromImportedRow(row: ImportedAssetRow, rowIndex: number): As
 
 function getBarcodeDetectorConstructor() {
   return (window as unknown as { BarcodeDetector?: BarcodeDetectorConstructor }).BarcodeDetector;
+}
+
+function createMultiFormatReader() {
+  const hints = new Map<DecodeHintType, BarcodeFormat[]>();
+  hints.set(DecodeHintType.POSSIBLE_FORMATS, [
+    BarcodeFormat.QR_CODE,
+    BarcodeFormat.DATA_MATRIX,
+    BarcodeFormat.AZTEC,
+    BarcodeFormat.PDF_417,
+    BarcodeFormat.CODE_128,
+    BarcodeFormat.CODE_39,
+    BarcodeFormat.EAN_13,
+    BarcodeFormat.EAN_8
+  ]);
+  return new BrowserMultiFormatReader(hints);
+}
+
+function decodeCanvasWithJsQr(canvas: HTMLCanvasElement) {
+  const context = canvas.getContext("2d", { willReadFrequently: true });
+  if (!context || !canvas.width || !canvas.height) return "";
+
+  const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+  return jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "attemptBoth" })?.data ?? "";
+}
+
+function decodeCanvasWithZxing(reader: BrowserMultiFormatReader, canvas: HTMLCanvasElement) {
+  try {
+    return reader.decodeFromCanvas(canvas).getText();
+  } catch {
+    return "";
+  }
+}
+
+function drawCenterCrop(source: HTMLCanvasElement, target: HTMLCanvasElement, cropRatio: number) {
+  const size = Math.floor(Math.min(source.width, source.height) * cropRatio);
+  if (!size) return false;
+
+  const sourceX = Math.floor((source.width - size) / 2);
+  const sourceY = Math.floor((source.height - size) / 2);
+  const outputSize = 900;
+  const context = target.getContext("2d", { willReadFrequently: true });
+
+  if (!context) return false;
+
+  target.width = outputSize;
+  target.height = outputSize;
+  context.imageSmoothingEnabled = false;
+  context.drawImage(source, sourceX, sourceY, size, size, 0, 0, outputSize, outputSize);
+  return true;
 }
 
 function detectFiberSignal(imageData: ImageData): FiberSignalResult | null {
@@ -4544,6 +4595,8 @@ function QRScanModal({
 }) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const cropCanvasRef = useRef<HTMLCanvasElement | null>(null);
+  const multiFormatReaderRef = useRef<BrowserMultiFormatReader | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const frameRef = useRef<number | null>(null);
   const isResolvedRef = useRef(false);
@@ -4553,6 +4606,10 @@ function QRScanModal({
   const [scannerStatus, setScannerStatus] = useState("Starting camera...");
   const [nfcStatus, setNfcStatus] = useState<"idle" | "starting" | "ready" | "unsupported" | "error">("idle");
   const nfcSupported = typeof window !== "undefined" && "NDEFReader" in window;
+
+  if (!multiFormatReaderRef.current) {
+    multiFormatReaderRef.current = createMultiFormatReader();
+  }
 
   async function startNfcScan() {
     if (!nfcSupported) {
@@ -4638,7 +4695,7 @@ function QRScanModal({
       const canvas = canvasRef.current;
 
       if (!video || !canvas || !navigator.mediaDevices?.getUserMedia) {
-        setScannerStatus("Camera scanning is not available in this browser. Enter the QR ID manually.");
+        setScannerStatus("Camera scanning is not available in this browser. Enter the QR or printed tag ID manually.");
         return;
       }
 
@@ -4665,11 +4722,14 @@ function QRScanModal({
         video.srcObject = stream;
         video.setAttribute("playsinline", "true");
         await video.play();
-        setScannerStatus("Camera ready. Hold a PatchPilot QR label inside the frame.");
+        setScannerStatus("Camera ready. Hold the QR or 2D tag close until the code fills the frame.");
 
         const BarcodeDetector = getBarcodeDetectorConstructor();
         const detector = BarcodeDetector ? new BarcodeDetector({ formats: ["qr_code"] }) : null;
         const context = canvas.getContext("2d", { willReadFrequently: true });
+        const cropCanvas = cropCanvasRef.current ?? document.createElement("canvas");
+        cropCanvasRef.current = cropCanvas;
+        const multiFormatReader = multiFormatReaderRef.current;
 
         const scanFrame = async () => {
           if (!isMounted || isResolvedRef.current) return;
@@ -4694,9 +4754,19 @@ function QRScanModal({
               canvas.width = video.videoWidth;
               canvas.height = video.videoHeight;
               context.drawImage(video, 0, 0, canvas.width, canvas.height);
-              const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-              const result = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "attemptBoth" });
-              scannedValue = result?.data ?? "";
+              scannedValue = decodeCanvasWithJsQr(canvas);
+            }
+
+            if (!scannedValue && multiFormatReader && canvas.width && canvas.height) {
+              scannedValue = decodeCanvasWithZxing(multiFormatReader, canvas);
+            }
+
+            if (!scannedValue && multiFormatReader && canvas.width && canvas.height) {
+              for (const ratio of [0.7, 0.5, 0.35]) {
+                if (!drawCenterCrop(canvas, cropCanvas, ratio)) continue;
+                scannedValue = decodeCanvasWithJsQr(cropCanvas) || decodeCanvasWithZxing(multiFormatReader, cropCanvas);
+                if (scannedValue) break;
+              }
             }
 
             if (scannedValue) {
@@ -4708,7 +4778,7 @@ function QRScanModal({
 
             missedFramesRef.current += 1;
             if (missedFramesRef.current === 18) {
-              setScannerStatus("Camera is open, but no QR was detected yet. Move closer, hold steady, and make sure the QR fills the frame.");
+              setScannerStatus("Camera is open, but no code was detected yet. Move closer so the small code fills the frame and hold steady.");
             }
           } catch {
             setScannerStatus("Scanning paused. Try better light or enter the QR ID manually.");
@@ -4736,7 +4806,7 @@ function QRScanModal({
     const value = manualValue.trim();
 
     if (!value) {
-      setScannerStatus("Enter a QR ID or PatchPilot QR URL.");
+      setScannerStatus("Enter a QR ID, printed tag number, or PatchPilot QR URL.");
       return;
     }
 
@@ -4766,16 +4836,30 @@ function QRScanModal({
       canvas.width = image.naturalWidth;
       canvas.height = image.naturalHeight;
       context.drawImage(image, 0, 0, canvas.width, canvas.height);
-      const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-      const result = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "attemptBoth" });
+      const multiFormatReader = multiFormatReaderRef.current;
+      const cropCanvas = cropCanvasRef.current ?? document.createElement("canvas");
+      cropCanvasRef.current = cropCanvas;
+      let decodedValue = decodeCanvasWithJsQr(canvas);
 
-      if (result?.data) {
+      if (!decodedValue && multiFormatReader) {
+        decodedValue = decodeCanvasWithZxing(multiFormatReader, canvas);
+      }
+
+      if (!decodedValue && multiFormatReader) {
+        for (const ratio of [0.8, 0.6, 0.4]) {
+          if (!drawCenterCrop(canvas, cropCanvas, ratio)) continue;
+          decodedValue = decodeCanvasWithJsQr(cropCanvas) || decodeCanvasWithZxing(multiFormatReader, cropCanvas);
+          if (decodedValue) break;
+        }
+      }
+
+      if (decodedValue) {
         isResolvedRef.current = true;
-        onResolved(result.data);
+        onResolved(decodedValue);
         return;
       }
 
-      setScannerStatus("No QR found in that image. Try a sharper image or enter the QR ID manually.");
+      setScannerStatus("No supported code found in that image. Try a sharper close-up or enter the printed ID manually.");
     } catch {
       setScannerStatus("Image upload could not be decoded. Try another image or enter the QR ID manually.");
     } finally {
@@ -4822,7 +4906,7 @@ function QRScanModal({
 
         <div className="scanner-status">
           <strong>{scannerStatus}</strong>
-          <small>Camera reads QR only. NFC tags need browser NFC support. UHF/125kHz RFID tags need an external reader or manual ID entry.</small>
+          <small>Camera reads QR and common 2D codes. NFC tags need browser NFC support. UHF/125kHz RFID tags need an external reader or manual ID entry.</small>
         </div>
 
         <form className="scanner-manual" onSubmit={submitManualValue}>
@@ -4831,7 +4915,7 @@ function QRScanModal({
         </form>
 
         <label className="scanner-upload">
-          <span>Upload QR image</span>
+          <span>Upload QR / 2D code image</span>
           <input
             accept="image/*"
             onChange={(event) => {
