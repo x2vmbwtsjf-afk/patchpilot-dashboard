@@ -1599,18 +1599,84 @@ const inventoryStock: InvGroup[] = [
 ];
 
 function createAssetId() {
-  const storedNext = Number(window.localStorage.getItem("patchpilot_asset_sequence") || "128");
-  const next = Number.isFinite(storedNext) ? storedNext : 128;
+  const storedNext = Number(window.localStorage.getItem("patchpilot_asset_sequence") || "900000");
+  const next = Number.isFinite(storedNext) && storedNext >= 900000 ? storedNext : 900000;
   window.localStorage.setItem("patchpilot_asset_sequence", String(next + 1));
   return `PP-${String(next).padStart(6, "0")}`;
 }
 
 function getQrPayload(asset: AssetRecord) {
-  return `patchpilot://asset/${asset.id}`;
+  const params = new URLSearchParams();
+  const fields: Array<[string, string]> = [
+    ["name", asset.name],
+    ["type", asset.assetType],
+    ["serial", asset.serial],
+    ["status", asset.status],
+    ["site", asset.site],
+    ["room", asset.room],
+    ["rack", asset.rack],
+    ["ru", asset.ruPosition],
+    ["ip", asset.ipAddress],
+    ["mac", asset.macAddress],
+    ["vlan", asset.vlan],
+    ["port", asset.switchPort],
+    ["cable", asset.cableType],
+    ["conn", asset.connectorType],
+    ["owner", asset.owner],
+    ["tags", asset.tags]
+  ];
+
+  fields.forEach(([key, value]) => {
+    const trimmed = value.trim();
+    if (trimmed) params.set(key, trimmed);
+  });
+
+  const query = params.toString();
+  return `patchpilot://asset/${asset.id}${query ? `?${query}` : ""}`;
 }
 
 function normalizeAssetLookup(value: string) {
-  return value.trim().replace("patchpilot://asset/", "").replace("https://app.patchpilot.io/a/", "");
+  return parseScannedAssetPayload(value).id;
+}
+
+function parseScannedAssetPayload(value: string) {
+  const raw = value.trim();
+  const cleaned = raw.replace("patchpilot://asset/", "").replace("https://app.patchpilot.io/a/", "");
+  const [idPart, query = ""] = cleaned.split("?");
+  const id = idPart.trim();
+  const params = new URLSearchParams(query);
+
+  if (!id || !query) return { id, asset: null as AssetRecord | null };
+
+  const now = new Date().toISOString();
+  const asset: AssetRecord = {
+    id,
+    qrCode: id,
+    assetType: params.get("type") || "Server",
+    name: params.get("name") || id,
+    serial: params.get("serial") || "",
+    status: normalizeImportedStatus(params.get("status") || "Active"),
+    site: params.get("site") || "",
+    room: params.get("room") || "",
+    rack: params.get("rack") || "",
+    ruPosition: params.get("ru") || "",
+    ipAddress: params.get("ip") || "",
+    macAddress: params.get("mac") || "",
+    vlan: params.get("vlan") || "",
+    switchPort: params.get("port") || "",
+    cableType: params.get("cable") || "",
+    length: "",
+    connectorType: params.get("conn") || "",
+    from: "",
+    to: "",
+    notes: "Opened from self-contained QR payload. Save to DB to store it on this device.",
+    tags: params.get("tags") || "scanned",
+    owner: params.get("owner") || "",
+    createdAt: now,
+    updatedAt: now
+  };
+
+  return { id, asset };
 }
 
 function normalizeImportHeader(value: string) {
@@ -2084,7 +2150,8 @@ export default function DashboardPage() {
   }
 
   async function openAssetFromQrValue(value: string) {
-    const id = normalizeAssetLookup(value);
+    const scannedPayload = parseScannedAssetPayload(value);
+    const id = scannedPayload.id;
 
     if (!id) {
       setScanMessage("No QR value detected.");
@@ -2095,6 +2162,17 @@ export default function DashboardPage() {
       const database = await getAssetDatabase();
       const found = await database.getById(id);
       const fallbackAsset = demoAssetInventory.find((asset) => asset.id === id || asset.qrCode === id);
+
+      if (!found && scannedPayload.asset) {
+        setSelectedAsset(scannedPayload.asset);
+        setActiveNav("QR Studio");
+        setQuery(scannedPayload.asset.id);
+        setIsSearchOpen(false);
+        setIsScannerOpen(false);
+        setScanMessage(`Opened ${scannedPayload.asset.id} from QR payload`);
+        setActionNotice(`Opened ${scannedPayload.asset.name || scannedPayload.asset.id} from the QR itself. Save to DB on this device if needed.`);
+        return;
+      }
 
       if (!found && !fallbackAsset) {
         const shouldCreate = window.confirm(`QR/tag code ${id} was not found in the database.\n\nAdd it as a new asset?`);
@@ -5211,24 +5289,33 @@ function QRStudio({
 
   async function openFromScan() {
     if (!database) return;
-    const id = normalizeAssetLookup(scanValue);
+    const scannedPayload = parseScannedAssetPayload(scanValue);
+    const id = scannedPayload.id;
     const found = await database.getById(id);
     const fallbackAsset = indexedAssets.find((item) => item.id === id || item.qrCode === id);
     const resolvedAsset = found ?? fallbackAsset;
 
+    if (!resolvedAsset && scannedPayload.asset) {
+      setAsset(scannedPayload.asset);
+      setSearch(scannedPayload.asset.id);
+      setScanValue("");
+      setMessage(`Opened ${scannedPayload.asset.id} from QR payload. Save to DB to store it on this device.`);
+      return;
+    }
+
     if (!resolvedAsset) {
-      const shouldCreate = window.confirm(`QR/RFID code ${id} was not found in the database.\n\nAdd it as a new asset?`);
+      const shouldCreate = window.confirm(`QR/tag code ${id} was not found in the database.\n\nAdd it as a new asset?`);
 
       if (shouldCreate) {
         const draft = createAssetDraft(id, scanValue.trim());
         setAsset(draft);
         setSearch("");
         setScanValue("");
-        setMessage(`QR/RFID ${id} was not found. Fill the details, then Save to DB.`);
+        setMessage(`QR/tag ${id} was not found. Fill the details, then Save to DB.`);
         return;
       }
 
-      setMessage(`QR/RFID ${id} was not found and was not added.`);
+      setMessage(`QR/tag ${id} was not found and was not added.`);
       return;
     }
 
