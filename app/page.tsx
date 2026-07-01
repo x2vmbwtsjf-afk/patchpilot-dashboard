@@ -171,6 +171,16 @@ type BarcodeDetectorApi = {
 
 type BarcodeDetectorConstructor = new (options?: { formats?: string[] }) => BarcodeDetectorApi;
 
+type CameraTrackCapabilities = MediaTrackCapabilities & {
+  torch?: boolean;
+  zoom?: { min?: number; max?: number; step?: number };
+};
+
+type CameraTrackConstraints = MediaTrackConstraints & {
+  advanced?: Array<MediaTrackConstraintSet & { torch?: boolean; focusMode?: string }>;
+  zoom?: number;
+};
+
 type RackHealth = "Healthy" | "Warning" | "Critical";
 type DeviceStatus = "Online" | "Warning" | "Offline";
 type DeviceKind = "Switch" | "Server" | "Patch Panel" | "Storage" | "PDU" | "UPS";
@@ -1643,8 +1653,14 @@ function normalizeAssetLookup(value: string) {
   return parseScannedAssetPayload(value).id;
 }
 
+function normalizeManualTagValue(value: string) {
+  const trimmed = value.trim();
+  if (/^\d{2,8}$/.test(trimmed)) return `TAG-${trimmed}`;
+  return trimmed;
+}
+
 function parseScannedAssetPayload(value: string) {
-  const raw = value.trim();
+  const raw = normalizeManualTagValue(value);
   const cleaned = raw.replace("patchpilot://asset/", "").replace("https://app.patchpilot.io/a/", "");
   const [idPart, query = ""] = cleaned.split("?");
   const id = idPart.trim();
@@ -4724,6 +4740,7 @@ function QRScanModal({
   const [manualValue, setManualValue] = useState("");
   const [scannerStatus, setScannerStatus] = useState("Starting camera...");
   const [nfcStatus, setNfcStatus] = useState<"idle" | "starting" | "ready" | "unsupported" | "error">("idle");
+  const [cameraControls, setCameraControls] = useState({ torch: false, torchOn: false, zoomMin: 1, zoomMax: 1, zoom: 1 });
   const nfcSupported = typeof window !== "undefined" && "NDEFReader" in window;
 
   if (!multiFormatReaderRef.current) {
@@ -4785,6 +4802,27 @@ function QRScanModal({
     }
   }
 
+  async function applyCameraControl(next: Partial<{ torchOn: boolean; zoom: number }>) {
+    const track = streamRef.current?.getVideoTracks()[0];
+    if (!track) return;
+
+    const torchOn = next.torchOn ?? cameraControls.torchOn;
+    const zoom = next.zoom ?? cameraControls.zoom;
+    const constraints: CameraTrackConstraints = {};
+    const advanced: CameraTrackConstraints["advanced"] = [];
+
+    if (cameraControls.torch) advanced.push({ torch: torchOn });
+    if (cameraControls.zoomMax > cameraControls.zoomMin) constraints.zoom = zoom;
+    if (advanced.length) constraints.advanced = advanced;
+
+    try {
+      await track.applyConstraints(constraints);
+      setCameraControls((current) => ({ ...current, torchOn, zoom }));
+    } catch {
+      setScannerStatus("Camera control is not supported on this browser. Continue scanning or enter the printed tag number.");
+    }
+  }
+
   useEffect(() => {
     let shouldAutoStart = false;
     try {
@@ -4838,6 +4876,23 @@ function QRScanModal({
         }
 
         streamRef.current = stream;
+        const track = stream.getVideoTracks()[0];
+        const capabilities = track?.getCapabilities?.() as CameraTrackCapabilities | undefined;
+        if (capabilities) {
+          const zoomMin = capabilities.zoom?.min ?? 1;
+          const zoomMax = capabilities.zoom?.max ?? 1;
+          const preferredZoom = zoomMax > zoomMin ? Math.min(zoomMax, Math.max(zoomMin, 2.5)) : 1;
+          setCameraControls({ torch: Boolean(capabilities.torch), torchOn: false, zoomMin, zoomMax, zoom: preferredZoom });
+
+          const constraints: CameraTrackConstraints = { advanced: [{ focusMode: "continuous" }] };
+          if (zoomMax > zoomMin) constraints.zoom = preferredZoom;
+          try {
+            await track.applyConstraints(constraints);
+          } catch {
+            // Some mobile browsers expose capabilities but reject constraints.
+          }
+        }
+
         video.srcObject = stream;
         video.setAttribute("playsinline", "true");
         await video.play();
@@ -5023,15 +5078,38 @@ function QRScanModal({
           </div>
         </div>
 
+        <div className="scanner-camera-controls">
+          {cameraControls.zoomMax > cameraControls.zoomMin && (
+            <label>
+              <span>Zoom</span>
+              <input
+                max={cameraControls.zoomMax}
+                min={cameraControls.zoomMin}
+                onChange={(event) => void applyCameraControl({ zoom: Number(event.target.value) })}
+                step="0.1"
+                type="range"
+                value={cameraControls.zoom}
+              />
+            </label>
+          )}
+          {cameraControls.torch && (
+            <button onClick={() => void applyCameraControl({ torchOn: !cameraControls.torchOn })} type="button">
+              {cameraControls.torchOn ? "Torch Off" : "Torch On"}
+            </button>
+          )}
+        </div>
+
         <div className="scanner-status">
           <strong>{scannerStatus}</strong>
           <small>Camera reads QR and common 2D codes. NFC tags need browser NFC support. UHF/125kHz RFID tags need an external reader or manual ID entry.</small>
         </div>
 
         <form className="scanner-manual" onSubmit={submitManualValue}>
-          <input value={manualValue} onChange={(event) => setManualValue(event.target.value)} placeholder="Enter QR, NFC UID, RFID ID, or asset ID manually..." />
+          <input value={manualValue} onChange={(event) => setManualValue(event.target.value)} placeholder="Enter printed tag number, QR, NFC UID, RFID ID..." />
           <button type="submit">Open Asset</button>
         </form>
+
+        <p className="scanner-tag-hint">For the tags in your photo, type only the printed number, for example 361. PatchPilot will save it as TAG-361.</p>
 
         <label className="scanner-upload">
           <span>Upload QR / 2D code image</span>

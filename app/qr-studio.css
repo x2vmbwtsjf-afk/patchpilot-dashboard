@@ -1092,6 +1092,51 @@
   color: #05111d;
 }
 
+.scanner-camera-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+  margin: 0 14px 12px;
+}
+
+.scanner-camera-controls:empty {
+  display: none;
+}
+
+.scanner-camera-controls label {
+  display: grid;
+  gap: 4px;
+}
+
+.scanner-camera-controls label span {
+  color: var(--muted);
+  font-size: 0.68rem;
+  font-weight: 850;
+}
+
+.scanner-camera-controls input {
+  width: 100%;
+}
+
+.scanner-camera-controls button {
+  min-height: 32px;
+  border: 1px solid rgba(250, 204, 21, 0.3);
+  border-radius: 8px;
+  padding: 0 10px;
+  background: rgba(250, 204, 21, 0.09);
+  color: #fef3c7;
+  font-size: 0.72rem;
+  font-weight: 850;
+}
+
+.scanner-tag-hint {
+  margin: -6px 14px 12px;
+  color: #9fb4cc;
+  font-size: 0.7rem;
+  line-height: 1.35;
+}
+
 .scanner-upload {
   display: grid;
   margin: 0 14px 14px;
