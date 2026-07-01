@@ -262,6 +262,10 @@ type CableInventoryItem = {
   notes: string;
 };
 
+const PRODUCTION_ASSET_RESET_VERSION = "2026-07-01-production-assets-v1";
+const ENABLE_DEMO_ASSETS_IN_REGISTRY = false;
+const ASSET_SEQUENCE_START = 900000;
+
 const navItems: NavItem[] = [
   { label: "Command", icon: "H" },
   { label: "QR Studio", icon: "Q" },
@@ -1599,8 +1603,8 @@ const inventoryStock: InvGroup[] = [
 ];
 
 function createAssetId() {
-  const storedNext = Number(window.localStorage.getItem("patchpilot_asset_sequence") || "900000");
-  const next = Number.isFinite(storedNext) && storedNext >= 900000 ? storedNext : 900000;
+  const storedNext = Number(window.localStorage.getItem("patchpilot_asset_sequence") || String(ASSET_SEQUENCE_START));
+  const next = Number.isFinite(storedNext) && storedNext >= ASSET_SEQUENCE_START ? storedNext : ASSET_SEQUENCE_START;
   window.localStorage.setItem("patchpilot_asset_sequence", String(next + 1));
   return `PP-${String(next).padStart(6, "0")}`;
 }
@@ -1981,6 +1985,25 @@ function openAssetDatabase(): Promise<IDBDatabase> {
   });
 }
 
+function deleteAssetDatabase(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const request = window.indexedDB.deleteDatabase("patchpilot_operations");
+    request.onsuccess = () => resolve();
+    request.onerror = () => reject(request.error);
+    request.onblocked = () => resolve();
+  });
+}
+
+async function resetProductionAssetStorageIfNeeded() {
+  const currentVersion = window.localStorage.getItem("patchpilot_asset_reset_version");
+  if (currentVersion === PRODUCTION_ASSET_RESET_VERSION) return false;
+
+  await deleteAssetDatabase();
+  window.localStorage.setItem("patchpilot_asset_sequence", String(ASSET_SEQUENCE_START));
+  window.localStorage.setItem("patchpilot_asset_reset_version", PRODUCTION_ASSET_RESET_VERSION);
+  return true;
+}
+
 async function getAssetDatabase(): Promise<AssetDatabaseApi> {
   const database = await openAssetDatabase();
 
@@ -2066,7 +2089,21 @@ export default function DashboardPage() {
   }
 
   useEffect(() => {
-    void refreshSavedAssets();
+    async function prepareProductionAssets() {
+      try {
+        const didReset = await resetProductionAssetStorageIfNeeded();
+        await refreshSavedAssets();
+        if (didReset) {
+          setSelectedAsset(null);
+          setQuery("");
+          setActionNotice("Production asset registry reset. Local asset/QR data was cleared; new QR IDs start at PP-900000.");
+        }
+      } catch {
+        await refreshSavedAssets();
+      }
+    }
+
+    void prepareProductionAssets();
   }, []);
 
   const visibleActivities = useMemo(() => {
@@ -2077,7 +2114,9 @@ export default function DashboardPage() {
 
   const allAssets = useMemo(() => {
     const byId = new Map<string, AssetRecord>();
-    demoAssetInventory.forEach((asset) => byId.set(asset.id, asset));
+    if (ENABLE_DEMO_ASSETS_IN_REGISTRY) {
+      demoAssetInventory.forEach((asset) => byId.set(asset.id, asset));
+    }
     savedAssets.forEach((asset) => byId.set(asset.id, asset));
     return Array.from(byId.values()).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   }, [savedAssets]);
@@ -2161,7 +2200,7 @@ export default function DashboardPage() {
     try {
       const database = await getAssetDatabase();
       const found = await database.getById(id);
-      const fallbackAsset = demoAssetInventory.find((asset) => asset.id === id || asset.qrCode === id);
+      const fallbackAsset = ENABLE_DEMO_ASSETS_IN_REGISTRY ? demoAssetInventory.find((asset) => asset.id === id || asset.qrCode === id) : null;
 
       if (!found && scannedPayload.asset) {
         setSelectedAsset(scannedPayload.asset);
@@ -4107,7 +4146,9 @@ function AssetsInventoryPage({
   // ── keep for import / QR studio ──────────────────────────────────────────
   const assetRows = useMemo(() => {
     const byId = new Map<string, AssetRecord>();
-    demoAssetInventory.forEach((a) => byId.set(a.id, a));
+    if (ENABLE_DEMO_ASSETS_IN_REGISTRY) {
+      demoAssetInventory.forEach((a) => byId.set(a.id, a));
+    }
     savedAssets.forEach((a) => byId.set(a.id, a));
     return Array.from(byId.values()).sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
   }, [savedAssets]);
