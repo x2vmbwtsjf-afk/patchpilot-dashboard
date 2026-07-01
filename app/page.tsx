@@ -4548,6 +4548,7 @@ function QRScanModal({
   const frameRef = useRef<number | null>(null);
   const isResolvedRef = useRef(false);
   const lastScanRef = useRef(0);
+  const missedFramesRef = useRef(0);
   const [manualValue, setManualValue] = useState("");
   const [scannerStatus, setScannerStatus] = useState("Starting camera...");
   const [nfcStatus, setNfcStatus] = useState<"idle" | "starting" | "ready" | "unsupported" | "error">("idle");
@@ -4682,29 +4683,32 @@ function QRScanModal({
           lastScanRef.current = now;
 
           try {
+            let scannedValue = "";
+
             if (detector) {
               const results = await detector.detect(video);
-              const value = results[0]?.rawValue;
+              scannedValue = results[0]?.rawValue ?? "";
+            }
 
-              if (value) {
-                isResolvedRef.current = true;
-                stopCamera();
-                onResolved(value);
-                return;
-              }
-            } else if (context && video.videoWidth && video.videoHeight) {
+            if (!scannedValue && context && video.videoWidth && video.videoHeight) {
               canvas.width = video.videoWidth;
               canvas.height = video.videoHeight;
               context.drawImage(video, 0, 0, canvas.width, canvas.height);
               const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
-              const result = jsQR(imageData.data, imageData.width, imageData.height);
+              const result = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "attemptBoth" });
+              scannedValue = result?.data ?? "";
+            }
 
-              if (result?.data) {
-                isResolvedRef.current = true;
-                stopCamera();
-                onResolved(result.data);
-                return;
-              }
+            if (scannedValue) {
+              isResolvedRef.current = true;
+              stopCamera();
+              onResolved(scannedValue);
+              return;
+            }
+
+            missedFramesRef.current += 1;
+            if (missedFramesRef.current === 18) {
+              setScannerStatus("Camera is open, but no QR was detected yet. Move closer, hold steady, and make sure the QR fills the frame.");
             }
           } catch {
             setScannerStatus("Scanning paused. Try better light or enter the QR ID manually.");
@@ -4738,6 +4742,45 @@ function QRScanModal({
 
     isResolvedRef.current = true;
     onResolved(value);
+  }
+
+  async function decodeQrImage(file: File) {
+    const imageUrl = URL.createObjectURL(file);
+    const image = new Image();
+
+    try {
+      await new Promise<void>((resolve, reject) => {
+        image.onload = () => resolve();
+        image.onerror = () => reject(new Error("Image failed to load"));
+        image.src = imageUrl;
+      });
+
+      const canvas = canvasRef.current ?? document.createElement("canvas");
+      const context = canvas.getContext("2d", { willReadFrequently: true });
+
+      if (!context) {
+        setScannerStatus("Could not read this image. Enter the QR ID manually.");
+        return;
+      }
+
+      canvas.width = image.naturalWidth;
+      canvas.height = image.naturalHeight;
+      context.drawImage(image, 0, 0, canvas.width, canvas.height);
+      const imageData = context.getImageData(0, 0, canvas.width, canvas.height);
+      const result = jsQR(imageData.data, imageData.width, imageData.height, { inversionAttempts: "attemptBoth" });
+
+      if (result?.data) {
+        isResolvedRef.current = true;
+        onResolved(result.data);
+        return;
+      }
+
+      setScannerStatus("No QR found in that image. Try a sharper image or enter the QR ID manually.");
+    } catch {
+      setScannerStatus("Image upload could not be decoded. Try another image or enter the QR ID manually.");
+    } finally {
+      URL.revokeObjectURL(imageUrl);
+    }
   }
 
   return (
@@ -4786,6 +4829,19 @@ function QRScanModal({
           <input value={manualValue} onChange={(event) => setManualValue(event.target.value)} placeholder="Enter QR, NFC UID, RFID ID, or asset ID manually..." />
           <button type="submit">Open Asset</button>
         </form>
+
+        <label className="scanner-upload">
+          <span>Upload QR image</span>
+          <input
+            accept="image/*"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              event.target.value = "";
+              if (file) void decodeQrImage(file);
+            }}
+            type="file"
+          />
+        </label>
       </section>
     </div>
   );

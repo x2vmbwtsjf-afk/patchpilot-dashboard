@@ -1092,6 +1092,28 @@
   color: #05111d;
 }
 
+.scanner-upload {
+  display: grid;
+  margin: 0 14px 14px;
+  border: 1px dashed rgba(148, 163, 184, 0.22);
+  border-radius: 9px;
+  padding: 9px 11px;
+  background: rgba(255, 255, 255, 0.035);
+  color: #b8c9dc;
+  font-size: 0.74rem;
+  font-weight: 850;
+  text-align: center;
+}
+
+.scanner-upload:hover {
+  border-color: rgba(34, 211, 238, 0.36);
+  background: rgba(34, 211, 238, 0.07);
+}
+
+.scanner-upload input {
+  display: none;
+}
+
 @media (max-width: 620px) {
   .scanner-overlay {
     align-items: start;
