@@ -156,10 +156,18 @@ type InvGroup = { id: string; tab: InvTab; vendor: string; model: string; spec: 
 type AssetDatabaseApi = {
   getAll: () => Promise<AssetRecord[]>;
   put: (asset: AssetRecord) => Promise<void>;
+  delete: (id: string) => Promise<void>;
   getById: (id: string) => Promise<AssetRecord | null>;
 };
 
 type ImportedAssetRow = Record<string, unknown>;
+
+type AdminCustomField = {
+  key: string;
+  label: string;
+};
+
+type AdminCustomValues = Record<string, Record<string, string>>;
 
 type BarcodeDetectorResult = {
   rawValue: string;
@@ -278,6 +286,7 @@ const ASSET_SEQUENCE_START = 900000;
 
 const navItems: NavItem[] = [
   { label: "Command", icon: "H" },
+  { label: "Admin", icon: "AD" },
   { label: "QR Studio", icon: "Q" },
   { label: "Assets", icon: "A" },
   { label: "Tickets", icon: "SD" },
@@ -2038,6 +2047,13 @@ async function getAssetDatabase(): Promise<AssetDatabaseApi> {
         request.onsuccess = () => resolve();
         request.onerror = () => reject(request.error);
       }),
+    delete: (id) =>
+      new Promise((resolve, reject) => {
+        const transaction = database.transaction("assets", "readwrite");
+        const request = transaction.objectStore("assets").delete(id);
+        request.onsuccess = () => resolve();
+        request.onerror = () => reject(request.error);
+      }),
     getById: (id) =>
       new Promise((resolve, reject) => {
         const transaction = database.transaction("assets", "readonly");
@@ -2048,8 +2064,420 @@ async function getAssetDatabase(): Promise<AssetDatabaseApi> {
   };
 }
 
+const ADMIN_CUSTOM_FIELDS_KEY = "patchpilot_admin_custom_fields";
+const ADMIN_CUSTOM_VALUES_KEY = "patchpilot_admin_custom_values";
+
+const adminCoreFields: Array<{ key: keyof AssetRecord; label: string; type?: "select" | "textarea"; options?: string[] }> = [
+  { key: "id", label: "Asset ID / QR" },
+  { key: "name", label: "Asset Name" },
+  { key: "assetType", label: "Type", type: "select", options: assetTypes },
+  { key: "status", label: "Status", type: "select", options: assetStatuses },
+  { key: "serial", label: "Serial" },
+  { key: "site", label: "Site" },
+  { key: "room", label: "Room" },
+  { key: "rack", label: "Rack" },
+  { key: "ruPosition", label: "RU / Position" },
+  { key: "ipAddress", label: "IP Address" },
+  { key: "macAddress", label: "MAC Address" },
+  { key: "vlan", label: "VLAN" },
+  { key: "switchPort", label: "Switch Port" },
+  { key: "cableType", label: "Cable Type" },
+  { key: "length", label: "Length" },
+  { key: "connectorType", label: "Connector" },
+  { key: "from", label: "From" },
+  { key: "to", label: "To" },
+  { key: "owner", label: "Owner" },
+  { key: "tags", label: "Tags" },
+  { key: "notes", label: "Notes", type: "textarea" }
+];
+
+function readAdminCustomFields(): AdminCustomField[] {
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(ADMIN_CUSTOM_FIELDS_KEY) || "[]") as AdminCustomField[];
+    return Array.isArray(parsed) ? parsed.filter((field) => field.key && field.label) : [];
+  } catch {
+    return [];
+  }
+}
+
+function readAdminCustomValues(): AdminCustomValues {
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(ADMIN_CUSTOM_VALUES_KEY) || "{}") as AdminCustomValues;
+    return parsed && typeof parsed === "object" ? parsed : {};
+  } catch {
+    return {};
+  }
+}
+
+function saveAdminCustomFields(fields: AdminCustomField[]) {
+  window.localStorage.setItem(ADMIN_CUSTOM_FIELDS_KEY, JSON.stringify(fields));
+}
+
+function saveAdminCustomValues(values: AdminCustomValues) {
+  window.localStorage.setItem(ADMIN_CUSTOM_VALUES_KEY, JSON.stringify(values));
+}
+
+function normalizeAdminFieldKey(label: string) {
+  const base = label
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+  return base || `field_${Date.now()}`;
+}
+
+function exportAssetsToCsv(assets: AssetRecord[], customFields: AdminCustomField[], customValues: AdminCustomValues) {
+  const columns = [...adminCoreFields.map((field) => field.key as string), ...customFields.map((field) => field.key)];
+  const header = [...adminCoreFields.map((field) => field.label), ...customFields.map((field) => field.label)];
+  const rows = assets.map((asset) =>
+    columns.map((column) => {
+      const value = column in asset ? String(asset[column as keyof AssetRecord] ?? "") : String(customValues[asset.id]?.[column] ?? "");
+      return `"${value.replace(/"/g, '""')}"`;
+    }).join(",")
+  );
+  const csv = [header.map((label) => `"${label.replace(/"/g, '""')}"`).join(","), ...rows].join("\n");
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `patchpilot-assets-${new Date().toISOString().slice(0, 10)}.csv`;
+  link.click();
+  URL.revokeObjectURL(link.href);
+}
+
+function AdminPage({ onBack, onAssetsChanged }: { onBack: () => void; onAssetsChanged: () => Promise<void> }) {
+  const [assets, setAssets] = useState<AssetRecord[]>([]);
+  const [selectedAssetId, setSelectedAssetId] = useState("");
+  const [draft, setDraft] = useState<AssetRecord>(() => createAssetDraft(createAssetId()));
+  const [filter, setFilter] = useState("");
+  const [notice, setNotice] = useState("Admin ready. Add, edit, delete, and extend asset records.");
+  const [customFields, setCustomFields] = useState<AdminCustomField[]>(() => readAdminCustomFields());
+  const [customValues, setCustomValues] = useState<AdminCustomValues>(() => readAdminCustomValues());
+  const [newFieldLabel, setNewFieldLabel] = useState("");
+  const [qrPreview, setQrPreview] = useState("");
+
+  async function loadAssets(preferredId?: string) {
+    try {
+      const database = await getAssetDatabase();
+      const rows = await database.getAll();
+      setAssets(rows);
+      const selected = rows.find((asset) => asset.id === preferredId) ?? rows[0];
+      if (selected) {
+        setSelectedAssetId(selected.id);
+        setDraft(selected);
+      } else if (!preferredId) {
+        const fresh = createAssetDraft(createAssetId());
+        setSelectedAssetId("");
+        setDraft(fresh);
+      }
+    } catch {
+      setAssets([]);
+      setNotice("Asset database is unavailable in this browser.");
+    }
+  }
+
+  useEffect(() => {
+    void loadAssets();
+  }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+    QRCode.toDataURL(getQrPayload(draft), { margin: 1, width: 220, errorCorrectionLevel: "M" })
+      .then((dataUrl) => {
+        if (isMounted) setQrPreview(dataUrl);
+      })
+      .catch(() => {
+        if (isMounted) setQrPreview("");
+      });
+    return () => { isMounted = false; };
+  }, [draft]);
+
+  const filteredAssets = useMemo(() => {
+    const normalized = filter.trim().toLowerCase();
+    if (!normalized) return assets;
+    return assets.filter((asset) =>
+      [asset.id, asset.qrCode, asset.name, asset.serial, asset.assetType, asset.site, asset.room, asset.rack, asset.ipAddress, asset.macAddress, asset.switchPort, asset.owner, asset.tags]
+        .some((value) => value.toLowerCase().includes(normalized))
+    );
+  }, [assets, filter]);
+
+  function selectAsset(asset: AssetRecord) {
+    setSelectedAssetId(asset.id);
+    setDraft(asset);
+    setNotice(`Editing ${asset.name || asset.id}.`);
+  }
+
+  function startNewAsset() {
+    const fresh = createAssetDraft(createAssetId());
+    setSelectedAssetId("");
+    setDraft(fresh);
+    setNotice("New asset draft created.");
+  }
+
+  function updateDraft<K extends keyof AssetRecord>(key: K, value: AssetRecord[K]) {
+    setDraft((current) => ({
+      ...current,
+      [key]: value,
+      qrCode: key === "id" ? String(value) : current.qrCode,
+      updatedAt: new Date().toISOString()
+    }));
+  }
+
+  async function saveDraft(event?: FormEvent) {
+    event?.preventDefault();
+    const now = new Date().toISOString();
+    const id = draft.id.trim() || createAssetId();
+    const saved: AssetRecord = {
+      ...draft,
+      id,
+      qrCode: draft.qrCode.trim() || id,
+      name: draft.name.trim() || id,
+      createdAt: draft.createdAt || now,
+      updatedAt: now
+    };
+
+    try {
+      const database = await getAssetDatabase();
+      if (selectedAssetId && selectedAssetId !== saved.id) {
+        await database.delete(selectedAssetId);
+        setCustomValues((current) => {
+          const next = { ...current, [saved.id]: current[selectedAssetId] ?? current[saved.id] ?? {} };
+          delete next[selectedAssetId];
+          saveAdminCustomValues(next);
+          return next;
+        });
+      }
+      await database.put(saved);
+      await loadAssets(saved.id);
+      await onAssetsChanged();
+      setNotice(`Saved ${saved.name || saved.id}.`);
+    } catch {
+      setNotice("Save failed. Check browser storage permissions and try again.");
+    }
+  }
+
+  async function deleteDraft() {
+    if (!selectedAssetId) {
+      startNewAsset();
+      return;
+    }
+    const confirmed = window.confirm(`Delete ${draft.name || selectedAssetId} from the asset database?`);
+    if (!confirmed) return;
+
+    try {
+      const database = await getAssetDatabase();
+      await database.delete(selectedAssetId);
+      setCustomValues((current) => {
+        const next = { ...current };
+        delete next[selectedAssetId];
+        saveAdminCustomValues(next);
+        return next;
+      });
+      await loadAssets();
+      await onAssetsChanged();
+      setNotice(`Deleted ${selectedAssetId}.`);
+    } catch {
+      setNotice("Delete failed. Check browser storage permissions and try again.");
+    }
+  }
+
+  function addCustomField() {
+    const label = newFieldLabel.trim();
+    if (!label) return;
+    const keyBase = normalizeAdminFieldKey(label);
+    let key = keyBase;
+    let counter = 2;
+    while (customFields.some((field) => field.key === key)) {
+      key = `${keyBase}_${counter}`;
+      counter += 1;
+    }
+    const next = [...customFields, { key, label }];
+    setCustomFields(next);
+    saveAdminCustomFields(next);
+    setNewFieldLabel("");
+    setNotice(`Custom field added: ${label}.`);
+  }
+
+  function removeCustomField(key: string) {
+    const nextFields = customFields.filter((field) => field.key !== key);
+    const nextValues: AdminCustomValues = {};
+    Object.entries(customValues).forEach(([assetId, values]) => {
+      const copy = { ...values };
+      delete copy[key];
+      nextValues[assetId] = copy;
+    });
+    setCustomFields(nextFields);
+    setCustomValues(nextValues);
+    saveAdminCustomFields(nextFields);
+    saveAdminCustomValues(nextValues);
+  }
+
+  function updateCustomValue(key: string, value: string) {
+    setCustomValues((current) => {
+      const next = {
+        ...current,
+        [draft.id]: {
+          ...(current[draft.id] ?? {}),
+          [key]: value
+        }
+      };
+      saveAdminCustomValues(next);
+      return next;
+    });
+  }
+
+  function printCurrentQr() {
+    if (!qrPreview) return;
+    const printWindow = window.open("", "_blank", "width=420,height=520");
+    if (!printWindow) return;
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>${draft.id} QR</title>
+          <style>
+            @page { size: 50mm 50mm; margin: 0; }
+            body { margin: 0; width: 50mm; height: 50mm; display: grid; place-items: center; background: white; }
+            img { width: 42mm; height: 42mm; image-rendering: pixelated; }
+          </style>
+        </head>
+        <body><img src="${qrPreview}" alt="${draft.id}" /></body>
+      </html>
+    `);
+    printWindow.document.close();
+    printWindow.focus();
+    window.setTimeout(() => printWindow.print(), 150);
+  }
+
+  return (
+    <main className="admin-page">
+      <header className="admin-hero">
+        <div>
+          <p>PatchPilot Admin</p>
+          <h1>Asset Registry Control</h1>
+          <span>Manage production assets, QR identities, metadata fields, and printable labels from one admin surface.</span>
+        </div>
+        <div className="admin-actions">
+          <button onClick={onBack} type="button">Dashboard</button>
+          <button onClick={startNewAsset} type="button">New Asset</button>
+          <button onClick={() => exportAssetsToCsv(assets, customFields, customValues)} type="button">Export CSV</button>
+        </div>
+      </header>
+
+      <section className="admin-kpis">
+        <article><span>Total Assets</span><strong>{assets.length}</strong><small>Local production DB</small></article>
+        <article><span>With Serial</span><strong>{assets.filter((asset) => asset.serial).length}</strong><small>Searchable serials</small></article>
+        <article><span>Racked</span><strong>{assets.filter((asset) => asset.rack).length}</strong><small>Rack or bin assigned</small></article>
+        <article><span>Custom Fields</span><strong>{customFields.length}</strong><small>Admin-defined metadata</small></article>
+      </section>
+
+      <p className="admin-notice">{notice}</p>
+
+      <section className="admin-layout">
+        <aside className="admin-list-card">
+          <div className="admin-card-header">
+            <div>
+              <span>Registry</span>
+              <strong>{filteredAssets.length} records</strong>
+            </div>
+            <input value={filter} onChange={(event) => setFilter(event.target.value)} placeholder="Search assets..." />
+          </div>
+          <div className="admin-asset-list">
+            {filteredAssets.map((asset) => (
+              <button className={selectedAssetId === asset.id ? "active" : ""} key={asset.id} onClick={() => selectAsset(asset)} type="button">
+                <span>
+                  <strong>{asset.name || asset.id}</strong>
+                  <small>{asset.id} · {asset.assetType}</small>
+                </span>
+                <em>{asset.rack || asset.site || asset.status}</em>
+              </button>
+            ))}
+            {!filteredAssets.length && <div className="admin-empty">No assets found. Create a new asset or import from Assets.</div>}
+          </div>
+        </aside>
+
+        <form className="admin-editor" onSubmit={saveDraft}>
+          <div className="admin-card-header">
+            <div>
+              <span>Editor</span>
+              <strong>{selectedAssetId ? `Editing ${selectedAssetId}` : "New asset"}</strong>
+            </div>
+            <div className="admin-editor-actions">
+              <button type="submit">Save</button>
+              <button className="admin-danger" onClick={deleteDraft} type="button">Delete</button>
+            </div>
+          </div>
+
+          <div className="admin-editor-body">
+            <div className="admin-form-grid">
+              {adminCoreFields.map((field) => (
+                <label className={field.type === "textarea" ? "admin-field wide" : "admin-field"} key={field.key}>
+                  <span>{field.label}</span>
+                  {field.type === "select" ? (
+                    <select value={draft[field.key]} onChange={(event) => updateDraft(field.key, event.target.value as AssetRecord[typeof field.key])}>
+                      {field.options?.map((option) => <option key={option} value={option}>{option}</option>)}
+                    </select>
+                  ) : field.type === "textarea" ? (
+                    <textarea value={draft[field.key]} onChange={(event) => updateDraft(field.key, event.target.value as AssetRecord[typeof field.key])} rows={4} />
+                  ) : (
+                    <input value={draft[field.key]} onChange={(event) => updateDraft(field.key, event.target.value as AssetRecord[typeof field.key])} />
+                  )}
+                </label>
+              ))}
+            </div>
+
+            <section className="admin-custom-panel">
+              <div className="admin-card-header compact">
+                <div>
+                  <span>Custom Fields</span>
+                  <strong>Add fields without changing code</strong>
+                </div>
+                <div className="admin-add-field">
+                  <input value={newFieldLabel} onChange={(event) => setNewFieldLabel(event.target.value)} placeholder="Field name" />
+                  <button onClick={addCustomField} type="button">Add</button>
+                </div>
+              </div>
+              <div className="admin-form-grid">
+                {customFields.map((field) => (
+                  <label className="admin-field custom" key={field.key}>
+                    <span>
+                      {field.label}
+                      <button onClick={() => removeCustomField(field.key)} type="button">Remove</button>
+                    </span>
+                    <input value={customValues[draft.id]?.[field.key] ?? ""} onChange={(event) => updateCustomValue(field.key, event.target.value)} />
+                  </label>
+                ))}
+                {!customFields.length && <div className="admin-empty wide">Examples: warranty date, PO number, supplier, device role, lifecycle owner.</div>}
+              </div>
+            </section>
+          </div>
+        </form>
+
+        <aside className="admin-qr-card">
+          <div className="admin-card-header">
+            <div>
+              <span>QR Label</span>
+              <strong>{draft.id}</strong>
+            </div>
+          </div>
+          <div className="admin-qr-preview">
+            {qrPreview ? <img alt={`${draft.id} QR`} src={qrPreview} /> : <span>QR unavailable</span>}
+          </div>
+          <div className="admin-qr-actions">
+            <button onClick={printCurrentQr} type="button">Print QR</button>
+            {qrPreview && <a download={`${draft.id}.png`} href={qrPreview}>Download PNG</a>}
+          </div>
+          <dl className="admin-summary">
+            <div><dt>Payload</dt><dd>{getQrPayload(draft)}</dd></div>
+            <div><dt>Updated</dt><dd>{new Date(draft.updatedAt).toLocaleString()}</dd></div>
+          </dl>
+        </aside>
+      </section>
+    </main>
+  );
+}
+
 export default function DashboardPage() {
   const [activeNav, setActiveNav] = useState("Command");
+  const [isAdminRoute, setIsAdminRoute] = useState(() => window.location.pathname.replace(/\/+$/, "") === "/admin");
   const [query, setQuery] = useState("");
   const [savedAssets, setSavedAssets] = useState<AssetRecord[]>([]);
   const [selectedAsset, setSelectedAsset] = useState<AssetRecord | null>(null);
@@ -2062,6 +2490,23 @@ export default function DashboardPage() {
   const [isHelpOpen, setIsHelpOpen] = useState(false);
   const [readNotifs, setReadNotifs] = useState<Set<number>>(new Set());
   const commandImportInputRef = useRef<HTMLInputElement | null>(null);
+
+  function openAdminRoute() {
+    window.history.pushState(null, "", "/admin");
+    setIsAdminRoute(true);
+  }
+
+  function closeAdminRoute() {
+    window.history.pushState(null, "", "/");
+    setIsAdminRoute(false);
+    setActiveNav("Command");
+  }
+
+  useEffect(() => {
+    const syncRoute = () => setIsAdminRoute(window.location.pathname.replace(/\/+$/, "") === "/admin");
+    window.addEventListener("popstate", syncRoute);
+    return () => window.removeEventListener("popstate", syncRoute);
+  }, []);
 
   // ── Theme ──────────────────────────────────────────────────────────────────
   const [theme, setTheme] = useState<"dark" | "light">(() => {
@@ -2301,6 +2746,10 @@ export default function DashboardPage() {
   const isSelectedAssetSaved = selectedAsset ? allAssets.some((asset) => asset.id === selectedAsset.id || asset.qrCode === selectedAsset.id) : false;
   const isQrCreationView = activeNav === "QR Studio" && (!selectedAsset || !isSelectedAssetSaved);
 
+  if (isAdminRoute) {
+    return <AdminPage onAssetsChanged={refreshSavedAssets} onBack={closeAdminRoute} />;
+  }
+
   return (
     <main className="ops-shell">
       <input
@@ -2321,7 +2770,7 @@ export default function DashboardPage() {
 
         <nav className="ops-nav" aria-label="Primary">
           {navItems.map((item) => (
-            <button className={activeNav === item.label ? "active" : ""} key={item.label} onClick={() => setActiveNav(item.label)} type="button">
+            <button className={activeNav === item.label ? "active" : ""} key={item.label} onClick={() => item.label === "Admin" ? openAdminRoute() : setActiveNav(item.label)} type="button">
               <span className="nav-icon">{item.icon}</span>
               <span>{item.label}</span>
               {item.count && <small>{item.count}</small>}

@@ -10,6 +10,7 @@ import "../app/mobile.css";
 import "../app/command.css";
 import "../app/system.css";
 import "../app/screens.css";
+import "../app/admin.css";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
